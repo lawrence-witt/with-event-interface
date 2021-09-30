@@ -1,21 +1,22 @@
 import { ListenerTuple, ListenerMap, ListenerBinding, EventInterface } from "../types";
 
-export default function attachEventListeners<T, L extends ListenerBinding<T>, N extends undefined>(
+function attachEventListeners<T, L extends ListenerBinding<T>, N extends undefined>(
   instance: T,
   listeners: L,
   namespace?: N,
 ): EventInterface<T, L>;
 
-export default function attachEventListeners<T, L extends ListenerBinding<T>, N extends string>(
+function attachEventListeners<T, L extends ListenerBinding<T>, N extends string>(
   instance: T,
   listeners: L,
   namespace: N,
 ): EventInterface<T, L, N>;
 
-export default function attachEventListeners<
-  T extends { [key: string]: any },
-  L extends ListenerBinding<T>,
->(instance: T, listeners: L, namespace = "listeners"): EventInterface<T, L, string> {
+function attachEventListeners<T extends { [key: string]: any }, L extends ListenerBinding<T>>(
+  instance: T,
+  listeners: L,
+  namespace = "listeners",
+): EventInterface<T, L, string> {
   const name = namespace as "listeners";
 
   const withState = Object.assign(instance, { [name]: new Map() as ListenerMap });
@@ -76,3 +77,5 @@ export default function attachEventListeners<
 
   return withMethods;
 }
+
+export default attachEventListeners;

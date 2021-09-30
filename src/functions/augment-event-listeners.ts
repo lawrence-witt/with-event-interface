@@ -10,14 +10,14 @@ import {
   EventInterfaceBuilderConstructor,
 } from "../types";
 
-export default function augmentEventListeners<
+function augmentEventListeners<
   C extends Constructor,
   L extends ListenerBinding<InferPrototype<C>>,
   B extends undefined,
   N extends string = "listeners",
 >(constructor: C, listeners: L, builders?: B, namespace?: N): EventInterfaceConstructor<C, L, N>;
 
-export default function augmentEventListeners<
+function augmentEventListeners<
   C extends Constructor,
   L extends ListenerBinding<InferPrototype<C>>,
   B extends BuilderKeys<C>,
@@ -29,7 +29,7 @@ export default function augmentEventListeners<
   namespace?: N,
 ): EventInterfaceBuilderConstructor<C, L, B, N>;
 
-export default function augmentEventListeners<
+function augmentEventListeners<
   C extends Constructor,
   L extends ListenerBinding<InferPrototype<C>>,
   N extends string,
@@ -44,3 +44,5 @@ export default function augmentEventListeners<
     }
   };
 }
+
+export default augmentEventListeners;

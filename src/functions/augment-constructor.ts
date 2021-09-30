@@ -8,7 +8,7 @@ import {
   AugmentBuilderKeys,
 } from "../types";
 
-export default function augmentConstructor<
+function augmentConstructor<
   C extends Constructor,
   L extends ListenerBinding<InferPrototype<C>>,
   N extends string,
@@ -45,3 +45,5 @@ export default function augmentConstructor<
 
   return AugmentedConstructor;
 }
+
+export default augmentConstructor;

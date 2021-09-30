@@ -10,9 +10,7 @@ const config = defineConfig({
     sourcemap: true,
   },
   plugins: [
-    typescript({
-      tsconfig: "./config/typescript/tsconfig.prod.json",
-    }),
+    typescript(),
     terser({
       format: {
         comments: false,
