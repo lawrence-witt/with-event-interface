@@ -22,18 +22,26 @@ function attachEventListeners<T extends { [key: string]: any }, L extends Listen
   const withState = Object.assign(instance, { [name]: new Map() as ListenerMap });
 
   Object.entries(listeners).forEach(([type, method]) => {
-    if (!Object.prototype.hasOwnProperty.call(withState, method)) return;
+    if (typeof method !== "string") throw new Error("Method name must be a string.");
 
-    const original = withState[method];
+    if (!(method in withState)) {
+      throw new Error(`The property ${method} does not exist on the provided object.`);
+    }
 
-    if (typeof original !== "function") return;
+    if (typeof withState[method] !== "function") {
+      throw new Error(
+        `Expected the property ${method} to be a function. Recieved: ${typeof withState[method]}.`,
+      );
+    }
+
+    const original = withState[method].bind(withState);
 
     withState[method] = ((...args: any) => {
       const listeners = withState[name].get(type);
 
       if (!listeners) return original(...args);
 
-      const [onStart, onEnd] = listeners.reduce(
+      const [onEnd, onStart] = listeners.reduce(
         (out: [ListenerTuple[], ListenerTuple[]], current) => {
           out[+current[1]].push(current);
           return out;
