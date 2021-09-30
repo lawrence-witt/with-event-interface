@@ -1,4 +1,4 @@
-export class Base {}
+class Base {}
 
 export type Constructor<I = Base> = new (...args: any[]) => I;
 

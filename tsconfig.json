@@ -9,6 +9,8 @@
     "esModuleInterop": false,
     "isolatedModules": true,
     "outDir": "./dist",
+    "declaration": true,
+    "declarationDir": "./dist/types",
     "sourceMap": true
   },
   "include": ["./src"],
