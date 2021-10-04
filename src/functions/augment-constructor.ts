@@ -1,5 +1,7 @@
 import attachEventListeners from "./attach-event-listeners";
 
+import { createMissingError, createTypeError } from "../factories/create-error";
+
 import {
   Constructor,
   ListenerBinding,
@@ -25,15 +27,13 @@ function augmentConstructor<
 
   builders.forEach((key) => {
     if (!(key in AugmentedConstructor)) {
-      throw new Error(`The property ${key} does not exist on the provided constructor.`);
+      throw new Error(createMissingError(key, "constructor"));
     }
 
     const original = AugmentedConstructor[key];
 
     if (typeof original !== "function") {
-      throw new Error(
-        `Expected the property ${key} to be a function. Recieved: ${typeof original}.`,
-      );
+      throw new Error(createTypeError(key, typeof original));
     }
 
     AugmentedConstructor[key] = ((...args: []) => {

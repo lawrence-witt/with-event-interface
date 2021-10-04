@@ -1,3 +1,5 @@
+import { createMissingError, createTypeError } from "../factories/create-error";
+
 import { ListenerTuple, ListenerMap, ListenerBinding, EventInterface } from "../types";
 
 function attachEventListeners<T, L extends ListenerBinding<T>, N extends undefined>(
@@ -22,16 +24,16 @@ function attachEventListeners<T extends { [key: string]: any }, L extends Listen
   const withState = Object.assign(instance, { [name]: new Map() as ListenerMap });
 
   Object.entries(listeners).forEach(([type, method]) => {
-    if (typeof method !== "string") throw new Error("Method name must be a string.");
+    if (typeof method !== "string") {
+      throw new Error("Method name must be a string.");
+    }
 
     if (!(method in withState)) {
-      throw new Error(`The property ${method} does not exist on the provided object.`);
+      throw new Error(createMissingError(method, "object"));
     }
 
     if (typeof withState[method] !== "function") {
-      throw new Error(
-        `Expected the property ${method} to be a function. Recieved: ${typeof withState[method]}.`,
-      );
+      throw new Error(createTypeError(method, typeof withState[method]));
     }
 
     const original = withState[method].bind(withState);
