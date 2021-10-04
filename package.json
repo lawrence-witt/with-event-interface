@@ -1,8 +1,10 @@
 {
   "name": "with-event-listeners",
   "version": "1.0.0",
-  "description": "Add event interfaces to any object or class constructor",
-  "main": "index.js",
+  "description": "A simple utility for adding event interfaces to any object or class constructor",
+  "main": "./dist/index.js",
+  "module": "./dist/index.esm.js",
+  "types": "./dist/types/index.d.ts",
   "scripts": {
     "test": "jest",
     "build": "npm run lint && npm run prettier && npm run clean && rollup -c ./rollup.config.js",
@@ -24,6 +26,7 @@
     "rimraf": "^3.0.2",
     "rollup": "^2.57.0",
     "rollup-plugin-terser": "^7.0.2",
+    "rollup-plugin-typescript2": "^0.30.0",
     "ts-jest": "^27.0.5",
     "ts-node": "^10.2.1",
     "typescript": "^4.4.3"

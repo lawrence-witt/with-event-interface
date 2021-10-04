@@ -1,16 +1,24 @@
 import { defineConfig } from "rollup";
-import typescript from "@rollup/plugin-typescript";
+import typescript from "rollup-plugin-typescript2";
 import { terser } from "rollup-plugin-terser";
 
 const config = defineConfig({
   input: "./src/index.ts",
-  output: {
-    dir: "dist",
-    format: "es",
-    sourcemap: true,
-  },
+  output: [
+    {
+      file: "./dist/index.esm.js",
+      format: "esm",
+      sourcemap: true,
+    },
+    {
+      name: "bundle",
+      file: "./dist/index.js",
+      format: "umd",
+      sourcemap: true,
+    },
+  ],
   plugins: [
-    typescript(),
+    typescript({ useTsconfigDeclarationDir: true }),
     terser({
       format: {
         comments: false,
