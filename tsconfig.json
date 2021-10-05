@@ -4,6 +4,7 @@
     "module": "esnext",
     "moduleResolution": "node",
     "noEmitOnError": true,
+    "noErrorTruncation": true,
     "lib": ["es2017"],
     "strict": true,
     "esModuleInterop": true,

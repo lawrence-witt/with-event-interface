@@ -43,11 +43,11 @@ export type BuilderKeys<C extends Constructor> = C extends Constructor<infer P>
     }[StaticKeys<C>]
   : never;
 
-export type ReplaceStaticReturnTypes<C extends Constructor, Static extends StaticKeys<C>, R> = {
-  [K in Static]: C[K] extends (...args: infer A) => Promise<any>
-    ? (...args: A) => Promise<R>
-    : C[K] extends (...args: infer B) => any
-    ? (...args: B) => R
+export type ExtendBuilderReturnTypes<C extends Constructor, B extends BuilderKeys<C>, E> = {
+  [K in B]: C[K] extends (...args: infer A) => Promise<infer R>
+    ? (...args: A) => Promise<R & E>
+    : C[K] extends (...args: infer A) => infer R
+    ? (...args: A) => R & E
     : never;
 };
 
@@ -55,18 +55,18 @@ export type EventInterface<T, L extends ListenerBinding<T>, N extends string = "
   [K in N]: ListenerMap;
 } & EventListeners<T, L>;
 
-export type EventInterfaceConstructor<
-  C extends Constructor,
-  L extends ListenerBinding<InferPrototype<C>>,
-  N extends string = "listeners",
-> = Constructor<EventInterface<InferPrototype<C>, L, N>> & C;
-
 export type AugmentBuilderKeys<
   C extends Constructor,
   L extends ListenerBinding<InferPrototype<C>>,
   B extends BuilderKeys<C>,
   N extends string = "listeners",
-> = ReplaceStaticReturnTypes<C, B, EventInterface<InferPrototype<C>, L, N> & InferPrototype<C>> & C;
+> = ExtendBuilderReturnTypes<C, B, EventInterface<InferPrototype<C>, L, N>> & C;
+
+export type EventInterfaceConstructor<
+  C extends Constructor,
+  L extends ListenerBinding<InferPrototype<C>>,
+  N extends string = "listeners",
+> = Constructor<EventInterface<InferPrototype<C>, L, N>> & C;
 
 export type EventInterfaceBuilderConstructor<
   C extends Constructor,
