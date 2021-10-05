@@ -6,19 +6,19 @@ function attachEventListeners<T, L extends ListenerBinding<T>, N extends undefin
   instance: T,
   listeners: L,
   namespace?: N,
-): EventInterface<T, L>;
+): EventInterface<T, L> & T;
 
 function attachEventListeners<T, L extends ListenerBinding<T>, N extends string>(
   instance: T,
   listeners: L,
   namespace: N,
-): EventInterface<T, L, N>;
+): EventInterface<T, L, N> & T;
 
 function attachEventListeners<T extends { [key: string]: any }, L extends ListenerBinding<T>>(
   instance: T,
   listeners: L,
   namespace = "listeners",
-): EventInterface<T, L, string> {
+): EventInterface<T, L, string> & T {
   const name = namespace as "listeners";
 
   const withState = Object.assign(instance, { [name]: new Map() as ListenerMap });

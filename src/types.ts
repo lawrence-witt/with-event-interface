@@ -51,7 +51,7 @@ export type ReplaceStaticReturnTypes<C extends Constructor, Static extends Stati
     : never;
 };
 
-export type EventInterface<T, L extends ListenerBinding<T>, N extends string = "listeners"> = T & {
+export type EventInterface<T, L extends ListenerBinding<T>, N extends string = "listeners"> = {
   [K in N]: ListenerMap;
 } & EventListeners<T, L>;
 
@@ -66,7 +66,7 @@ export type AugmentBuilderKeys<
   L extends ListenerBinding<InferPrototype<C>>,
   B extends BuilderKeys<C>,
   N extends string = "listeners",
-> = ReplaceStaticReturnTypes<C, B, EventInterface<InferPrototype<C>, L, N>> & C;
+> = ReplaceStaticReturnTypes<C, B, EventInterface<InferPrototype<C>, L, N> & InferPrototype<C>> & C;
 
 export type EventInterfaceBuilderConstructor<
   C extends Constructor,

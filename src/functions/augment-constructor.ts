@@ -15,12 +15,7 @@ function augmentConstructor<
   L extends ListenerBinding<InferPrototype<C>>,
   N extends string,
   B extends BuilderKeys<C>,
->(
-  constructor: C,
-  listeners: ListenerBinding<InferPrototype<C>>,
-  builders: [...B[]],
-  namespace?: N,
-): AugmentBuilderKeys<C, L, B, N> {
+>(constructor: C, listeners: L, builders: [...B[]], namespace?: N): AugmentBuilderKeys<C, L, B, N> {
   const name = namespace || "listeners";
 
   class AugmentedConstructor extends constructor {}

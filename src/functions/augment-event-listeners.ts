@@ -32,15 +32,14 @@ function augmentEventListeners<
 function augmentEventListeners<
   C extends Constructor,
   L extends ListenerBinding<InferPrototype<C>>,
-  N extends string,
   B extends BuilderKeys<C>,
->(constructor: C, listeners: L, builders?: [...B[]], namespace?: N): unknown {
+>(constructor: C, listeners: L, builders?: [...B[]], namespace = "listeners"): unknown {
   return class extends (builders
     ? augmentConstructor(constructor, listeners, builders, namespace)
     : constructor) {
     constructor(...args: any[]) {
       super(...args);
-      attachEventListeners(this as InferPrototype<C>, listeners, namespace || "listeners");
+      attachEventListeners(this as InferPrototype<C>, listeners, namespace);
     }
   };
 }
