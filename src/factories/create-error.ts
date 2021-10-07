@@ -1,5 +1,7 @@
-export const createMissingError = (key: string, struct: string): string =>
-  `The property ${key} does not exist on the provided ${struct}.`;
+export const createPropertyError = (key: string, struct: string, expected: boolean): string =>
+  `The property ${key} ${
+    expected ? "does not exist" : "already exists"
+  } on the provided ${struct}.`;
 
-export const createTypeError = (key: string, recieved: string): string =>
-  `Expected the property ${key} to be a function. Recieved: ${recieved}.`;
+export const createTypeError = (key: string, expected: string, recieved: string): string =>
+  `Expected the property ${key} to be of type: ${expected}. Recieved: ${recieved}.`;

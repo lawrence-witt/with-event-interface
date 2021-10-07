@@ -1,25 +1,37 @@
-import { createMissingError, createTypeError } from "../factories/create-error";
+import { createPropertyError, createTypeError } from "../factories/create-error";
 
-import { ListenerTuple, ListenerMap, ListenerBinding, EventInterface } from "../types";
+import { ListenerTuple, ListenerMap, ListenerBinding, EventInterfaceInstance } from "../types";
 
 function attachEventListeners<T, L extends ListenerBinding<T>, N extends undefined>(
   instance: T,
   listeners: L,
   namespace?: N,
-): EventInterface<T, L> & T;
+): EventInterfaceInstance<T, L>;
 
 function attachEventListeners<T, L extends ListenerBinding<T>, N extends string>(
   instance: T,
   listeners: L,
   namespace: N,
-): EventInterface<T, L, N> & T;
+): EventInterfaceInstance<T, L, N>;
 
 function attachEventListeners<T extends { [key: string]: any }, L extends ListenerBinding<T>>(
   instance: T,
   listeners: L,
   namespace = "listeners",
-): EventInterface<T, L, string> & T {
+): unknown {
   const name = namespace as "listeners";
+
+  if (name in instance) {
+    throw new Error(createPropertyError(name, "object", false));
+  }
+
+  if ("addEventListener" in instance) {
+    throw new Error(createPropertyError("addEventListener", "object", false));
+  }
+
+  if ("removeEventListener" in instance) {
+    throw new Error(createPropertyError("removeEventListener", "object", false));
+  }
 
   const withState = Object.assign(instance, { [name]: new Map() as ListenerMap });
 
@@ -29,21 +41,21 @@ function attachEventListeners<T extends { [key: string]: any }, L extends Listen
     }
 
     if (!(method in withState)) {
-      throw new Error(createMissingError(method, "object"));
+      throw new Error(createPropertyError(method, "object", true));
     }
 
     if (typeof withState[method] !== "function") {
-      throw new Error(createTypeError(method, typeof withState[method]));
+      throw new Error(createTypeError(method, "function", typeof withState[method]));
     }
 
     const original = withState[method].bind(withState);
 
     withState[method] = ((...args: any) => {
-      const listeners = withState[name].get(type);
+      const callbacks = withState[name].get(type);
 
-      if (!listeners) return original(...args);
+      if (!callbacks) return original(...args);
 
-      const [onEnd, onStart] = listeners.reduce(
+      const [onEnd, onStart] = callbacks.reduce(
         (out: [ListenerTuple[], ListenerTuple[]], current) => {
           out[+current[1]].push(current);
           return out;
@@ -71,16 +83,16 @@ function attachEventListeners<T extends { [key: string]: any }, L extends Listen
 
   const withMethods = Object.assign(withState, {
     addEventListener: (type: string, listener: (...args: any) => any, onStart = false) => {
-      const listeners = withState[name].get(type);
-      if (!listeners) return;
-      withState[name].set(type, [...listeners, [listener, onStart]]);
+      const callbacks = withState[name].get(type);
+      if (!callbacks) return;
+      withState[name].set(type, [...callbacks, [listener, onStart]]);
     },
     removeEventListener: (type: string, listener: (...args: any) => any) => {
-      const listeners = withState[name].get(type);
-      if (!listeners) return;
+      const callbacks = withState[name].get(type);
+      if (!callbacks) return;
       withState[name].set(
         type,
-        listeners.filter((l) => l[0] !== listener),
+        callbacks.filter((l) => l[0] !== listener),
       );
     },
   });

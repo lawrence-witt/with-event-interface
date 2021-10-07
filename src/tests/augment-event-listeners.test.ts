@@ -77,5 +77,5 @@ test("it throws an error if the targeted static property is not a method", () =>
     augmentEventListeners(createMockConstructor(), { test: "syncMethodProperty" }, [
       "staticProperty" as any,
     ]);
-  }).toThrow("Expected the property staticProperty to be a function. Recieved: string.");
+  }).toThrow("Expected the property staticProperty to be of type: function. Recieved: string.");
 });

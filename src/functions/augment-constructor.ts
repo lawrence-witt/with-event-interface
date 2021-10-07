@@ -1,6 +1,6 @@
 import attachEventListeners from "./attach-event-listeners";
 
-import { createMissingError, createTypeError } from "../factories/create-error";
+import { createPropertyError, createTypeError } from "../factories/create-error";
 
 import {
   Constructor,
@@ -22,13 +22,13 @@ function augmentConstructor<
 
   builders.forEach((key) => {
     if (!(key in AugmentedConstructor)) {
-      throw new Error(createMissingError(key, "constructor"));
+      throw new Error(createPropertyError(key, "constructor", true));
     }
 
     const original = AugmentedConstructor[key];
 
     if (typeof original !== "function") {
-      throw new Error(createTypeError(key, typeof original));
+      throw new Error(createTypeError(key, "function", typeof original));
     }
 
     AugmentedConstructor[key] = ((...args: []) => {
