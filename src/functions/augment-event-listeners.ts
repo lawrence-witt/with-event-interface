@@ -5,43 +5,30 @@ import {
   Constructor,
   InferPrototype,
   ListenerBinding,
-  BuilderKeys,
+  KeyOfCirculars,
+  KeyOfBuilders,
   EventInterfaceConstructor,
-  EventInterfaceBuilderConstructor,
 } from "../types";
 
 function augmentEventListeners<
   C extends Constructor,
   L extends ListenerBinding<InferPrototype<C>>,
-  B extends undefined,
-  N extends string = "listeners",
->(constructor: C, listeners: L, builders?: B, namespace?: N): EventInterfaceConstructor<C, L, N>;
-
-function augmentEventListeners<
-  C extends Constructor,
-  L extends ListenerBinding<InferPrototype<C>>,
-  B extends BuilderKeys<C>,
+  Circ extends KeyOfCirculars<InferPrototype<C>> | undefined,
+  B extends KeyOfBuilders<C> | undefined,
   N extends string = "listeners",
 >(
   constructor: C,
   listeners: L,
-  builders: [...B[]],
-  namespace?: N,
-): EventInterfaceBuilderConstructor<C, L, B, N>;
-
-function augmentEventListeners<
-  C extends Constructor,
-  L extends ListenerBinding<InferPrototype<C>>,
-  B extends BuilderKeys<C>,
->(constructor: C, listeners: L, builders?: [...B[]], namespace = "listeners"): unknown {
-  return class extends (builders
-    ? augmentConstructor(constructor, listeners, builders, namespace)
-    : constructor) {
-    constructor(...args: any[]) {
+  circulars?: Exclude<Circ, undefined>[],
+  builders?: Exclude<B, undefined>[],
+  namespace = "listeners" as N,
+): EventInterfaceConstructor<C, L, Circ, B, N> {
+  return class extends augmentConstructor(constructor, listeners, circulars, builders, namespace) {
+    constructor(...args: any) {
       super(...args);
-      attachEventListeners(this as InferPrototype<C>, listeners, namespace);
+      attachEventListeners(this as InferPrototype<C>, listeners, circulars, namespace);
     }
-  };
+  } as EventInterfaceConstructor<C, L, Circ, B, N>;
 }
 
 export default augmentEventListeners;

@@ -4,9 +4,13 @@ export type Constructor<I = Base> = new (...args: any[]) => I;
 
 export type InferPrototype<T> = T extends Constructor<infer P> ? P : never;
 
-export type KeyOfRestraint<T, U> = { [P in keyof T]: T[P] extends U ? P : never }[keyof T];
+export type KeyOfConstraint<T, U> = {
+  [P in keyof T]: T[P] extends U ? P : never;
+}[keyof T] extends PropertyKey
+  ? { [P in keyof T]: T[P] extends U ? P : never }[keyof T]
+  : never;
 
-export type KeyOfFunctions<T> = KeyOfRestraint<T, (...args: any) => any>;
+export type KeyOfFunctions<T> = KeyOfConstraint<T, (...args: any) => any>;
 
 export type StringKeys<T> = Exclude<keyof T, number | symbol>;
 
@@ -47,60 +51,61 @@ export type EventInterface<T, L extends ListenerBinding<T>, N extends string = "
 
 // Builder Types
 
-export type StaticKeys<C extends Constructor> = Exclude<keyof C, "prototype"> extends string
-  ? Exclude<keyof C, "prototype">
-  : never;
+export type KeyOfCirculars<T> = KeyOfConstraint<T, (...args: any) => Promise<T> | T>;
 
-export type BuilderKeys<C extends Constructor> = C extends Constructor<infer P>
-  ? {
-      [K in StaticKeys<C>]: C[K] extends (...args: any) => Promise<P> | P ? K : never;
-    }[StaticKeys<C>]
-  : never;
+export type KeyOfBuilders<C extends Constructor> = KeyOfConstraint<
+  C,
+  (...args: any) => Promise<InferPrototype<C>> | InferPrototype<C>
+>;
 
-export type ExtendBuilderReturnTypes<C extends Constructor, B extends BuilderKeys<C>, E> = {
-  [K in B]: C[K] extends (...args: infer A) => Promise<infer R>
-    ? (...args: A) => Promise<R & E>
-    : C[K] extends (...args: infer A) => infer R
-    ? (...args: A) => R & E
+export type ExtendReturnTypes<T, P extends KeyOfFunctions<T>, E> = {
+  [K in P]: T[K] extends (...args: infer A) => Promise<infer R>
+    ? (...args: A) => Promise<E & R>
+    : T[K] extends (...args: infer A) => infer R
+    ? (...args: A) => E & R
     : never;
 };
 
-export type AugmentBuilderKeys<
+export type ExtendCircularReturnTypes<T, P extends KeyOfFunctions<T>, E> = {
+  [K in P]: T[K] extends (...args: infer A) => infer R
+    ? (...args: A) => ExtendCircularReturnTypes<T, P, E> & E & R
+    : T[K] extends (...args: infer A) => Promise<infer R>
+    ? (...args: A) => Promise<ExtendCircularReturnTypes<T, P, E> & E & R>
+    : never;
+};
+
+export type AugmentedConstructor<
   C extends Constructor,
   L extends ListenerBinding<InferPrototype<C>>,
-  B extends BuilderKeys<C>,
+  Circ extends KeyOfCirculars<InferPrototype<C>> | undefined,
+  B extends KeyOfBuilders<C> | undefined,
   N extends string = "listeners",
-> = ExtendBuilderReturnTypes<C, B, EventInterface<InferPrototype<C>, L, N>> & C;
+> = [B] extends [KeyOfBuilders<C>]
+  ? ExtendReturnTypes<C, B, EventInterfaceInstance<InferPrototype<C>, L, Circ, N>> & C
+  : C;
 
 // Return Types
 
 export type EventInterfaceInstance<
   T,
   L extends ListenerBinding<T>,
+  C extends KeyOfCirculars<T> | undefined = undefined,
   N extends string = "listeners",
-> = TypeTernary<
-  IncludesKey<T, N | keyof EventListeners<any, any>>,
-  never,
-  EventInterface<T, L, N> & T
->;
+> = IncludesKey<T, N | keyof EventListeners<any, any>> extends true
+  ? never
+  : [C] extends [KeyOfCirculars<T>]
+  ? EventInterface<T, L, N> & ExtendCircularReturnTypes<T, C, EventInterface<T, L, N>> & T
+  : EventInterface<T, L, N> & T;
 
 export type EventInterfaceConstructor<
   C extends Constructor,
   L extends ListenerBinding<InferPrototype<C>>,
+  Circ extends KeyOfCirculars<InferPrototype<C>> | undefined = undefined,
+  B extends KeyOfBuilders<C> | undefined = undefined,
   N extends string = "listeners",
-> = TypeTernary<
-  IncludesKey<InferPrototype<C>, N | keyof EventListeners<any, any>>,
-  never,
-  Constructor<EventInterface<InferPrototype<C>, L, N>> & C
->;
-
-export type EventInterfaceBuilderConstructor<
-  C extends Constructor,
-  L extends ListenerBinding<InferPrototype<C>>,
-  B extends BuilderKeys<C>,
-  N extends string = "listeners",
-> = TypeTernary<
-  IncludesKey<InferPrototype<C>, N | keyof EventListeners<any, any>>,
-  never,
-  Constructor<EventInterface<InferPrototype<C>, L, N>> & AugmentBuilderKeys<C, L, B, N>
->;
+> = IncludesKey<InferPrototype<C>, N | keyof EventListeners<any, any>> extends true
+  ? never
+  : [B] extends [KeyOfBuilders<C>]
+  ? Constructor<EventInterfaceInstance<InferPrototype<C>, L, Circ, N>> &
+      AugmentedConstructor<C, L, Circ, B, N>
+  : Constructor<EventInterfaceInstance<InferPrototype<C>, L, Circ, N>> & C;

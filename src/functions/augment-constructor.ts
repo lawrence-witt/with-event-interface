@@ -4,47 +4,55 @@ import { createPropertyError, createTypeError } from "../factories/create-error"
 
 import {
   Constructor,
+  KeyOfCirculars,
+  KeyOfBuilders,
   ListenerBinding,
   InferPrototype,
-  BuilderKeys,
-  AugmentBuilderKeys,
+  AugmentedConstructor,
 } from "../types";
 
 function augmentConstructor<
   C extends Constructor,
   L extends ListenerBinding<InferPrototype<C>>,
   N extends string,
-  B extends BuilderKeys<C>,
->(constructor: C, listeners: L, builders: [...B[]], namespace?: N): AugmentBuilderKeys<C, L, B, N> {
+  PB extends KeyOfCirculars<InferPrototype<C>> | undefined,
+  SB extends KeyOfBuilders<C> | undefined,
+>(
+  constructor: C,
+  listeners: L,
+  circulars?: Exclude<PB, undefined>[],
+  builders?: Exclude<SB, undefined>[],
+  namespace?: N,
+): AugmentedConstructor<C, L, PB, SB, N> {
   const name = namespace || "listeners";
 
-  class AugmentedConstructor extends constructor {}
+  class NewConstructor extends constructor {}
 
-  builders.forEach((key) => {
-    if (!(key in AugmentedConstructor)) {
+  builders?.forEach((key) => {
+    if (!(key in NewConstructor)) {
       throw new Error(createPropertyError(key, "constructor", true));
     }
 
-    const original = AugmentedConstructor[key];
+    const original = NewConstructor[key];
 
     if (typeof original !== "function") {
       throw new Error(createTypeError(key, "function", typeof original));
     }
 
-    AugmentedConstructor[key] = ((...args: []) => {
+    NewConstructor[key] = ((...args: []) => {
       const build = original(...args);
 
       if (typeof build?.then === "function") {
-        return build.then((instance: any) => {
-          return attachEventListeners(instance, listeners, name);
+        return build.then((instance: InferPrototype<C>) => {
+          return attachEventListeners(instance, listeners, circulars, name);
         });
       } else {
-        return attachEventListeners(build, listeners, name);
+        return attachEventListeners(build as InferPrototype<C>, listeners, circulars, name);
       }
-    }) as unknown as C[B];
+    }) as unknown as C[Exclude<SB, undefined>];
   });
 
-  return AugmentedConstructor;
+  return NewConstructor as AugmentedConstructor<C, L, PB, SB, N>;
 }
 
 export default augmentConstructor;

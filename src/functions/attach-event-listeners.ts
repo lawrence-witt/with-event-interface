@@ -1,25 +1,29 @@
 import { createPropertyError, createTypeError } from "../factories/create-error";
 
-import { ListenerTuple, ListenerMap, ListenerBinding, EventInterfaceInstance } from "../types";
+import { isEventInterface } from "../utilities/is-event-interface";
 
-function attachEventListeners<T, L extends ListenerBinding<T>, N extends undefined>(
+import {
+  KeyOfCirculars,
+  ListenerTuple,
+  ListenerMap,
+  ListenerBinding,
+  EventInterfaceInstance,
+} from "../types";
+
+function attachEventListeners<
+  T extends { [key: string]: any },
+  L extends ListenerBinding<T>,
+  C extends KeyOfCirculars<T> | undefined,
+  N extends string = "listeners",
+>(
   instance: T,
   listeners: L,
-  namespace?: N,
-): EventInterfaceInstance<T, L>;
-
-function attachEventListeners<T, L extends ListenerBinding<T>, N extends string>(
-  instance: T,
-  listeners: L,
-  namespace: N,
-): EventInterfaceInstance<T, L, N>;
-
-function attachEventListeners<T extends { [key: string]: any }, L extends ListenerBinding<T>>(
-  instance: T,
-  listeners: L,
-  namespace = "listeners",
-): unknown {
+  circulars?: Exclude<C, undefined>[],
+  namespace = "listeners" as N,
+): EventInterfaceInstance<T, L, C, N> {
   const name = namespace as "listeners";
+
+  if (isEventInterface(instance, listeners, circulars, namespace)) return instance;
 
   if (name in instance) {
     throw new Error(createPropertyError(name, "object", false));
@@ -69,16 +73,40 @@ function attachEventListeners<T extends { [key: string]: any }, L extends Listen
 
       if (typeof result?.then === "function") {
         return result.then((res: any) => {
+          if (circulars?.includes(method as Exclude<C, undefined>)) {
+            attachEventListeners(res as T, listeners, circulars, namespace);
+          }
           onEnd.forEach((tuple) => tuple[0](res));
           return res;
         });
       } else {
+        if (circulars?.includes(method as Exclude<C, undefined>)) {
+          attachEventListeners(result as T, listeners, circulars, namespace);
+        }
         onEnd.forEach((tuple) => tuple[0](result));
         return result;
       }
     }) as typeof withState[typeof method];
 
-    withState[name].set(type, []);
+    withState[namespace].set(type, []);
+  });
+
+  circulars?.forEach((circular) => {
+    if (Object.values(listeners).includes(circular)) return;
+
+    const original = withState[circular].bind(withState);
+
+    withState[circular] = ((...args: any) => {
+      const result = original(...args);
+
+      if (typeof result?.then === "function") {
+        return result.then((res: T) => {
+          return attachEventListeners(res, listeners, circulars, namespace);
+        });
+      } else {
+        return attachEventListeners(result as T, listeners, circulars, namespace);
+      }
+    }) as typeof withState[typeof circular];
   });
 
   const withMethods = Object.assign(withState, {
@@ -97,7 +125,7 @@ function attachEventListeners<T extends { [key: string]: any }, L extends Listen
     },
   });
 
-  return withMethods;
+  return withMethods as unknown as EventInterfaceInstance<T, L, C, N>;
 }
 
 export default attachEventListeners;
