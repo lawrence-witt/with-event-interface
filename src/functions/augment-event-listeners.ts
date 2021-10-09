@@ -1,5 +1,8 @@
 import attachEventListeners from "./attach-event-listeners";
-import augmentConstructor from "./augment-constructor";
+
+import { createPropertyError, createTypeError } from "../factories/create-error";
+
+import { chainIfPromise } from "../utils/chain-if-promise";
 
 import {
   Constructor,
@@ -23,12 +26,32 @@ function augmentEventListeners<
   builders?: Exclude<B, undefined>[],
   namespace = "listeners" as N,
 ): EventInterfaceConstructor<C, L, Circ, B, N> {
-  return class extends augmentConstructor(constructor, listeners, circulars, builders, namespace) {
+  class AugmentedConstructor extends constructor {
     constructor(...args: any) {
       super(...args);
       attachEventListeners(this as InferPrototype<C>, listeners, circulars, namespace);
     }
-  } as EventInterfaceConstructor<C, L, Circ, B, N>;
+  }
+
+  builders?.forEach((key) => {
+    if (!(key in AugmentedConstructor)) {
+      throw new Error(createPropertyError(key, "constructor", true));
+    }
+
+    const original = AugmentedConstructor[key];
+
+    if (typeof original !== "function") {
+      throw new Error(createTypeError(key, "function", typeof original));
+    }
+
+    AugmentedConstructor[key] = ((...args: []) => {
+      return chainIfPromise(original(...args), (res: InferPrototype<C>) => {
+        return attachEventListeners(res, listeners, circulars, namespace);
+      });
+    }) as C[Exclude<B, undefined>];
+  });
+
+  return AugmentedConstructor as EventInterfaceConstructor<C, L, Circ, B, N>;
 }
 
 export default augmentEventListeners;
