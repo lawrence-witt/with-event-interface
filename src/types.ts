@@ -22,9 +22,9 @@ export type TypeTernary<C, T, U> = C extends true ? T : U;
 
 export type ListenerTuple = [(...args: any[]) => any, boolean];
 
-export type ListenerMap = Map<string, ListenerTuple[]>;
-
-export type ListenerBinding<T> = { [key: string]: KeyOfFunctions<T> };
+export type ListenerBinding<T> = {
+  [key: string]: KeyOfConstraint<T, (...args: any) => any>;
+};
 
 // Event Types
 
@@ -46,7 +46,7 @@ export interface EventListeners<T, L extends ListenerBinding<T>> {
 }
 
 export type EventInterface<T, L extends ListenerBinding<T>, N extends string = "listeners"> = {
-  [K in N]: ListenerMap;
+  [K in N]: Map<string, ListenerTuple[]>;
 } & EventListeners<T, L>;
 
 // Builder Types

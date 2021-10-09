@@ -2,7 +2,7 @@ import attachEventListeners from "./attach-event-listeners";
 
 import { createPropertyError, createTypeError } from "../factories/create-error";
 
-import { chainIfPromise } from "../utilities/chain-if-promise";
+import { chainIfPromise } from "../utils/chain-if-promise";
 
 import {
   Constructor,

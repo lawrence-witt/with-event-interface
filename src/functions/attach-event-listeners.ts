@@ -1,15 +1,9 @@
 import { createPropertyError, createTypeError } from "../factories/create-error";
 
-import { isEventInterface } from "../utilities/is-event-interface";
-import { chainIfPromise } from "../utilities/chain-if-promise";
+import { isEventInterface } from "../utils/is-event-interface";
+import { chainIfPromise } from "../utils/chain-if-promise";
 
-import {
-  KeyOfCirculars,
-  ListenerTuple,
-  ListenerMap,
-  ListenerBinding,
-  EventInterfaceInstance,
-} from "../types";
+import { KeyOfCirculars, ListenerTuple, ListenerBinding, EventInterfaceInstance } from "../types";
 
 function attachEventListeners<
   T extends { [key: PropertyKey]: any },
@@ -22,30 +16,18 @@ function attachEventListeners<
   circulars?: Exclude<C, undefined>[],
   namespace = "listeners" as N,
 ): EventInterfaceInstance<T, L, C, N> {
-  const name = namespace as "listeners";
-
   if (isEventInterface(instance, listeners, circulars, namespace)) return instance;
 
-  if (name in instance) {
-    throw new Error(createPropertyError(name, "object", false));
-  }
+  const name = namespace as "listeners";
 
-  if ("addEventListener" in instance) {
-    throw new Error(createPropertyError("addEventListener", "object", false));
-  }
+  [name, "addEventListener", "removeEventListener"].forEach((prop) => {
+    if (prop in instance) throw new Error(createPropertyError(prop, "object", false));
+  });
 
-  if ("removeEventListener" in instance) {
-    throw new Error(createPropertyError("removeEventListener", "object", false));
-  }
-
-  const withState = Object.assign(instance, { [name]: new Map() as ListenerMap });
+  const withState = Object.assign(instance, { [name]: new Map<string, ListenerTuple[]>() });
 
   Object.entries(listeners).forEach(([type, method]) => {
-    if (typeof method !== "string") {
-      throw new Error("Method name must be a string.");
-    }
-
-    if (!(method in withState)) {
+    if (!((method as PropertyKey) in withState)) {
       throw new Error(createPropertyError(method, "object", true));
     }
 
@@ -72,14 +54,14 @@ function attachEventListeners<
 
       return chainIfPromise(original(...args), (res) => {
         if (circulars?.includes(method as Exclude<C, undefined>)) {
-          attachEventListeners(res as T, listeners, circulars, namespace);
+          attachEventListeners(res as T, listeners, circulars, name);
         }
         onEnd.forEach((tuple) => tuple[0](res));
         return res;
       });
     }) as typeof withState[typeof method];
 
-    withState[namespace].set(type, []);
+    withState[name].set(type, []);
   });
 
   circulars?.forEach((circular) => {
@@ -89,7 +71,7 @@ function attachEventListeners<
 
     withState[circular] = ((...args: any) => {
       return chainIfPromise(original(...args), (res: T) => {
-        return attachEventListeners(res, listeners, circulars, namespace);
+        return attachEventListeners(res, listeners, circulars, name);
       });
     }) as typeof withState[typeof circular];
   });

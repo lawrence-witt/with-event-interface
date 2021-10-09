@@ -88,7 +88,7 @@ test("it does not call an event listener which has been removed", () => {
   expect(callback).toHaveBeenCalledTimes(1);
 });
 
-test("it throws an error if the listener property is already assigned", () => {
+test("it throws an error if the listener namespace is already assigned", () => {
   const occupied = Object.assign(createMockInstance(), { listeners: "test" });
 
   expect(() => {
