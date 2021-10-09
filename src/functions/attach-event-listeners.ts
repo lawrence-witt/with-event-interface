@@ -1,6 +1,7 @@
 import { createPropertyError, createTypeError } from "../factories/create-error";
 
 import { isEventInterface } from "../utilities/is-event-interface";
+import { chainIfPromise } from "../utilities/chain-if-promise";
 
 import {
   KeyOfCirculars,
@@ -11,7 +12,7 @@ import {
 } from "../types";
 
 function attachEventListeners<
-  T extends { [key: string]: any },
+  T extends { [key: PropertyKey]: any },
   L extends ListenerBinding<T>,
   C extends KeyOfCirculars<T> | undefined,
   N extends string = "listeners",
@@ -60,8 +61,8 @@ function attachEventListeners<
       if (!callbacks) return original(...args);
 
       const [onEnd, onStart] = callbacks.reduce(
-        (out: [ListenerTuple[], ListenerTuple[]], current) => {
-          out[+current[1]].push(current);
+        (out: [ListenerTuple[], ListenerTuple[]], tuple) => {
+          out[+tuple[1]].push(tuple);
           return out;
         },
         [[], []],
@@ -69,23 +70,13 @@ function attachEventListeners<
 
       onStart.forEach((tuple) => tuple[0]());
 
-      const result = original(...args);
-
-      if (typeof result?.then === "function") {
-        return result.then((res: any) => {
-          if (circulars?.includes(method as Exclude<C, undefined>)) {
-            attachEventListeners(res as T, listeners, circulars, namespace);
-          }
-          onEnd.forEach((tuple) => tuple[0](res));
-          return res;
-        });
-      } else {
+      return chainIfPromise(original(...args), (res) => {
         if (circulars?.includes(method as Exclude<C, undefined>)) {
-          attachEventListeners(result as T, listeners, circulars, namespace);
+          attachEventListeners(res as T, listeners, circulars, namespace);
         }
-        onEnd.forEach((tuple) => tuple[0](result));
-        return result;
-      }
+        onEnd.forEach((tuple) => tuple[0](res));
+        return res;
+      });
     }) as typeof withState[typeof method];
 
     withState[namespace].set(type, []);
@@ -97,15 +88,9 @@ function attachEventListeners<
     const original = withState[circular].bind(withState);
 
     withState[circular] = ((...args: any) => {
-      const result = original(...args);
-
-      if (typeof result?.then === "function") {
-        return result.then((res: T) => {
-          return attachEventListeners(res, listeners, circulars, namespace);
-        });
-      } else {
-        return attachEventListeners(result as T, listeners, circulars, namespace);
-      }
+      return chainIfPromise(original(...args), (res: T) => {
+        return attachEventListeners(res, listeners, circulars, namespace);
+      });
     }) as typeof withState[typeof circular];
   });
 

@@ -14,7 +14,7 @@ export type KeyOfFunctions<T> = KeyOfConstraint<T, (...args: any) => any>;
 
 export type StringKeys<T> = Exclude<keyof T, number | symbol>;
 
-export type DistributeProperties<T extends PropertyKey> = T extends any ? { [K in T]: any } : never;
+export type DistributeProperties<T extends string> = T extends any ? { [K in T]: any } : never;
 
 export type IncludesKey<T, U extends string> = T extends DistributeProperties<U> ? true : false;
 

@@ -2,6 +2,8 @@ import attachEventListeners from "./attach-event-listeners";
 
 import { createPropertyError, createTypeError } from "../factories/create-error";
 
+import { chainIfPromise } from "../utilities/chain-if-promise";
+
 import {
   Constructor,
   KeyOfCirculars,
@@ -15,15 +17,15 @@ function augmentConstructor<
   C extends Constructor,
   L extends ListenerBinding<InferPrototype<C>>,
   N extends string,
-  PB extends KeyOfCirculars<InferPrototype<C>> | undefined,
-  SB extends KeyOfBuilders<C> | undefined,
+  Circ extends KeyOfCirculars<InferPrototype<C>> | undefined,
+  B extends KeyOfBuilders<C> | undefined,
 >(
   constructor: C,
   listeners: L,
-  circulars?: Exclude<PB, undefined>[],
-  builders?: Exclude<SB, undefined>[],
+  circulars?: Exclude<Circ, undefined>[],
+  builders?: Exclude<B, undefined>[],
   namespace?: N,
-): AugmentedConstructor<C, L, PB, SB, N> {
+): AugmentedConstructor<C, L, Circ, B, N> {
   const name = namespace || "listeners";
 
   class NewConstructor extends constructor {}
@@ -40,19 +42,13 @@ function augmentConstructor<
     }
 
     NewConstructor[key] = ((...args: []) => {
-      const build = original(...args);
-
-      if (typeof build?.then === "function") {
-        return build.then((instance: InferPrototype<C>) => {
-          return attachEventListeners(instance, listeners, circulars, name);
-        });
-      } else {
-        return attachEventListeners(build as InferPrototype<C>, listeners, circulars, name);
-      }
-    }) as unknown as C[Exclude<SB, undefined>];
+      return chainIfPromise(original(...args), (res: InferPrototype<C>) => {
+        return attachEventListeners(res, listeners, circulars, name);
+      });
+    }) as C[Exclude<B, undefined>];
   });
 
-  return NewConstructor as AugmentedConstructor<C, L, PB, SB, N>;
+  return NewConstructor as AugmentedConstructor<C, L, Circ, B, N>;
 }
 
 export default augmentConstructor;
