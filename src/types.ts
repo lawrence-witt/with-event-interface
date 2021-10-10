@@ -65,14 +65,6 @@ export type KeyOfBuilders<C extends Constructor> = KeyOfConstraint<
   (...args: any) => Promise<InferPrototype<C>> | InferPrototype<C>
 >;
 
-export type ExtendReturnTypes<T, P extends KeyOfFunctions<T>, E> = {
-  [K in P]: T[K] extends (...args: infer A) => Promise<infer R>
-    ? (...args: A) => Promise<E & R>
-    : T[K] extends (...args: infer A) => infer R
-    ? (...args: A) => E & R
-    : never;
-};
-
 export type ExtendCircularReturnTypes<T, P extends KeyOfFunctions<T>, E> = {
   [K in P]: T[K] extends (...args: infer A) => infer R
     ? (...args: A) => ExtendCircularReturnTypes<T, P, E> & E & R
@@ -81,14 +73,22 @@ export type ExtendCircularReturnTypes<T, P extends KeyOfFunctions<T>, E> = {
     : never;
 };
 
+export type ExtendReturnTypes<T, P extends KeyOfFunctions<T>, E> = {
+  [K in P]: T[K] extends (...args: infer A) => Promise<infer R>
+    ? (...args: A) => Promise<E & R>
+    : T[K] extends (...args: infer A) => infer R
+    ? (...args: A) => E & R
+    : never;
+};
+
 export type AugmentedConstructor<
   C extends Constructor,
   L extends ListenerBinding<InferPrototype<C>>,
-  Circ extends KeyOfCirculars<InferPrototype<C>> | undefined,
+  Ci extends KeyOfCirculars<InferPrototype<C>> | undefined,
   B extends KeyOfBuilders<C> | undefined,
   N extends string = "listeners",
 > = [B] extends [KeyOfBuilders<C>]
-  ? ExtendReturnTypes<C, B, EventInterfaceInstance<InferPrototype<C>, L, Circ, N>> & C
+  ? ExtendReturnTypes<C, B, EventInterfaceInstance<InferPrototype<C>, L, Ci, N>> & C
   : C;
 
 // Return Types
@@ -96,19 +96,24 @@ export type AugmentedConstructor<
 export type EventInterfaceInstance<
   T,
   L extends ListenerBinding<T>,
-  C extends KeyOfCirculars<T> | undefined = undefined,
+  C extends KeyOfCirculars<T> | undefined,
   N extends string = "listeners",
 > = [C] extends [KeyOfCirculars<T>]
-  ? EventInterface<T, L, N> & ExtendCircularReturnTypes<T, C, EventInterface<T, L, N>> & T
-  : EventInterface<T, L, N> & T;
+  ? EventInterface<T, L, N> &
+      ExtendCircularReturnTypes<T, C, EventInterface<T, L, N>> &
+      ExtendCircularReturnTypes<T, KeyOfCirculars<T>, Record<string, never>> &
+      T
+  : EventInterface<T, L, N> &
+      ExtendCircularReturnTypes<T, KeyOfCirculars<T>, Record<string, never>> &
+      T;
 
 export type EventInterfaceConstructor<
   C extends Constructor,
   L extends ListenerBinding<InferPrototype<C>>,
-  Circ extends KeyOfCirculars<InferPrototype<C>> | undefined = undefined,
-  B extends KeyOfBuilders<C> | undefined = undefined,
+  Ci extends KeyOfCirculars<InferPrototype<C>> | undefined,
+  B extends KeyOfBuilders<C> | undefined,
   N extends string = "listeners",
 > = [B] extends [KeyOfBuilders<C>]
-  ? Constructor<EventInterfaceInstance<InferPrototype<C>, L, Circ, N>> &
-      AugmentedConstructor<C, L, Circ, B, N>
-  : Constructor<EventInterfaceInstance<InferPrototype<C>, L, Circ, N>> & C;
+  ? Constructor<EventInterfaceInstance<InferPrototype<C>, L, Ci, N>> &
+      AugmentedConstructor<C, L, Ci, B, N>
+  : Constructor<EventInterfaceInstance<InferPrototype<C>, L, Ci, N>> & C;

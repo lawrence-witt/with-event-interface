@@ -17,16 +17,16 @@ import {
 export function augmentEventInterface<
   C extends Constructor,
   L extends ListenerBinding<InferPrototype<C>>,
-  Circ extends KeyOfCirculars<InferPrototype<C>> | undefined,
+  Ci extends KeyOfCirculars<InferPrototype<C>> | undefined,
   B extends KeyOfBuilders<C> | undefined,
   N extends string = "listeners",
 >(
   constructor: C extends Constructor<ReservedProperties<N>> ? never : C,
   listeners: L,
-  circulars?: Exclude<Circ, undefined>[],
+  circulars?: Exclude<Ci, undefined>[],
   builders?: Exclude<B, undefined>[],
   namespace = "listeners" as N,
-): EventInterfaceConstructor<C, L, Circ, B, N> {
+): EventInterfaceConstructor<C, L, Ci, B, N> {
   class AugmentedConstructor extends constructor {
     constructor(...args: any) {
       super(...args);
@@ -52,5 +52,5 @@ export function augmentEventInterface<
     }) as C[Exclude<B, undefined>];
   });
 
-  return AugmentedConstructor as EventInterfaceConstructor<C, L, Circ, B, N>;
+  return AugmentedConstructor as EventInterfaceConstructor<C, L, Ci, B, N>;
 }
