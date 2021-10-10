@@ -46,16 +46,17 @@ export function attachEventInterface<
     const listener = listenerEntries.find((entry) => entry[1] === key);
 
     withState[key] = ((...args: any) => {
-      if (!listener) {
-        return chainIfPromise(original(...args), (res: any) => {
-          if (circulars?.includes(key as Exclude<C, undefined>)) {
-            return attachEventInterface(res, listeners, circulars, name);
-          } else if (isSameEventInterface(res, withState, name)) {
-            return omitEventInterface(res, name);
-          }
+      const resolveResult = (res: any) => {
+        if (circulars?.includes(key as Exclude<C, undefined>)) {
+          return attachEventInterface(res, listeners, circulars, name);
+        } else if (isSameEventInterface(res, withState, name)) {
+          return omitEventInterface(res, name);
+        }
+        return res;
+      };
 
-          return res;
-        });
+      if (!listener) {
+        return chainIfPromise(original(...args), resolveResult);
       }
 
       const callbacks = withState[name].map.get(listener[0]);
@@ -72,16 +73,10 @@ export function attachEventInterface<
 
       onStart.forEach((tuple) => tuple[0]());
 
-      return chainIfPromise(original(...args), (res: any) => {
-        if (circulars?.includes(key as Exclude<C, undefined>)) {
-          res = attachEventInterface(res, listeners, circulars, name);
-        } else if (isSameEventInterface(res, withState, name)) {
-          res = omitEventInterface(res, name);
-        }
-
+      return ((res: any) => {
         onEnd.forEach((tuple) => tuple[0](res));
         return res;
-      });
+      })(chainIfPromise(original(...args), resolveResult));
     }) as typeof withState[typeof key];
 
     if (listener) withState[name].map.set(listener[0], []);
