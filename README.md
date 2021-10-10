@@ -1,4 +1,4 @@
-# with-event-listeners
+# with-event-interface
 
 Adds a simple, intuitive event interface to any JavaScript object or class constructor. Attach listeners to your methods and run side-effects whenever they get called.
 
@@ -7,21 +7,21 @@ Adds a simple, intuitive event interface to any JavaScript object or class const
 ### Installation
 
 ```
-npm install with-event-listeners
+npm install with-event-interface
 ```
 
 ### Imports
 
 ```
-import { attachEventListeners, augmentEventListeners } from "with-event-listeners";
+import { attachEventInterface, augmentEventInterface } from "with-event-interface";
 ```
 
-This library exposes two core functions. To attach an event interface to a JavaScript object, use `attachEventListeners`; to augment a class constructor with event interface functionality, use `augmentEventListeners`.
+This library exposes two core functions. To attach an event interface to a JavaScript object, use `attachEventInterface`; to augment a class constructor with event interface functionality, use `augmentEventInterface`.
 
-## AttachEventListeners
+## AttachEventInterface
 
 ```
-function attachEventListeners(instance, listeners, namespace) {};
+function attachEventInterface(instance, listeners, circulars?, namespace?) {};
 ```
 
 ### Parameters
@@ -29,6 +29,8 @@ function attachEventListeners(instance, listeners, namespace) {};
 `instance` - the object to attach event listeners to (this will mutate the provided object).
 
 `listeners` - a record binding event types to method names.
+
+`circulars` - (_optional_) - an array of method names which return instances of the object. Defaults to `undefined`.
 
 `namespace` - (_optional_) - the property on the object where event state will be stored. Defaults to `"listeners"`.
 
@@ -48,7 +50,7 @@ const myMaths = {
   subtract: (a, b) => a - b,
 };
 
-attachEventListeners(myMaths, {
+attachEventInterface(myMaths, {
   added: "add",
   subracted: "subtract",
 });
@@ -57,10 +59,10 @@ attachEventListeners(myMaths, {
 </details>
 <br/>
 
-## AugmentEventListeners
+## AugmentEventInterface
 
 ```
-function augmentEventListeners(constructor, listeners, builders, namespace) {};
+function augmentEventInterface(constructor, listeners, circulars?, builders?, namespace?) {};
 ```
 
 ### Parameters
@@ -68,6 +70,8 @@ function augmentEventListeners(constructor, listeners, builders, namespace) {};
 `constructor` - the class constructor to augment with event functionality (this will NOT mutate the provided constructor).
 
 `listeners` - a record binding event types to method names.
+
+`circulars` - (_optional_) - an array of prototype method names which return instances of the class. Defaults to `undefined`.
 
 `builders` - (_optional_) - an array of static method names which return instances of the class. Defaults to `undefined`.
 
@@ -94,7 +98,7 @@ class MyMaths {
   }
 }
 
-const MyMathsWithEvents = augmentEventListeners(MyMaths, {
+const MyMathsWithEvents = augmentEventInterface(MyMaths, {
   added: "add",
   subracted: "subtract",
 });
@@ -110,7 +114,7 @@ const myMaths = new MyMathsWithEvents();
 Once you have an object which has been extended with event functionality, you can attach listeners to it to trigger callbacks when specified methods have been called. This interface is very similar to the one already in use by various Web APIs. After extending your object, it will now expose two new methods, `addEventListener` and `removeEventListener`.
 
 ```
-function addEventListener(type, callback, onStart) {};
+function addEventListener(type, callback, onStart?) {};
 ```
 
 ### Parameters
@@ -149,7 +153,7 @@ const myMethods = {
   concat: (a, b) => a.concat(b),
 };
 
-attachEventListeners(myMethods, {
+attachEventInterface(myMethods, {
   sliced: "slice",
   concatted: "concat",
 });
@@ -173,7 +177,7 @@ const myMethods = {
   slice: async (a, b) => a.slice(b),
 };
 
-attachEventListeners(myMethods, {
+attachEventInterface(myMethods, {
   sliced: "slice",
 });
 
@@ -187,6 +191,30 @@ myMethods.slice({}, 1).catch((err) => console.log(err.message));
 ```
 
 Note that in the above example, the listener callback will not be executed if the promise it is waiting on rejects.
+
+### Circular Methods
+
+```
+const myMethods = {
+  slice: (a, b) => a.slice(b),
+  self: () => {
+    return myMethods;
+  }
+}
+
+attachEventInterface(myMethods, {
+  sliced: "slice",
+}, ["self"]);
+
+const itself = myMethods.self();
+
+console.log("listeners" in itself);
+  // console logs: true
+console.log("addEventListener" in itself);
+  // console logs: true
+  console.log("removeEventListener" in itself);
+  // console logs: true
+```
 
 ### Class Builders
 
@@ -207,11 +235,12 @@ class MyInterface {
   }
 }
 
-const MyInterfaceWithEvents = augmentEventListeners(
+const MyInterfaceWithEvents = augmentEventInterface(
   MyInterface,
   {
     started: "start",
   },
+  undefined,
   ["build"],
 );
 
@@ -227,13 +256,15 @@ const MyInterfaceWithEvents = augmentEventListeners(
 
 ## TypeScript
 
-`with-event-listeners` has been written in and is expressly designed for use with TypeScript. All arguments to the two exposed functions are checked for type safety, and the functions themselves return expressive, legible types which describe the enhanced objects and classes they transform.
+`with-event-interface` has been written in and is expressly designed for use with TypeScript. All arguments to the two exposed functions are checked for type safety, and the functions themselves return expressive types which describe the enhanced objects and classes they transform.
 
 ### Satisfying the Compiler
 
 All method keys provided in the `listeners` argument must refer to public methods on the object or constructor in question. Unfortunately it is not possible at this time to dynamically retrieve private/protected method names from a class, although this is a [proposed feature](https://github.com/microsoft/TypeScript/issues/22677) which may make its way to the language at some point.
 
-A "builder" is defined here as a static method on a class which returns either an instance of the class, or a Promise which resolves to an instance of the class. Only methods which satisfy this signature can have their names passed to the `builders` argument.
+A "circular" is defined here as a method on an object which returns either an instance of the object, or a Promise which resolves to an instance of the object. Only methods which satisfy this signature can have their names passed to the `circulars` argument. `attachEventInterface` is not picky about whether this instance is new or current, and will simply return the current object if the library's namespace is detected.
+
+Similarly, a "builder" is defined here as a static method on a class which returns either an instance of the class, or a Promise which resolves to an instance of the class. Only methods which satisfy this signature can have their names passed to the `builders` argument.
 
 <details>
 <summary>Expand</summary>
@@ -258,10 +289,10 @@ class MyClass {
   }
 }
 
-augmentEventListeners(MyClass, { B: "methodB" });
+augmentEventInterface(MyClass, { B: "methodB" });
   // Type '"methodB"' is not assignable to type '"methodC"'.
 
-augmentEventListeners(MyClass, { C: "methodC" }, ["methodA"]);
+augmentEventInterface(MyClass, { C: "methodC" }, ["methodA"]);
   // Type '"methodA"' is not assignable to type '"build"'.
 ```
 
@@ -270,7 +301,7 @@ augmentEventListeners(MyClass, { C: "methodC" }, ["methodA"]);
 
 ### Generics
 
-The `augmentEventListeners` function generally preserves generic type parameters in classes, with the exception of classes returned from a static builder. This is because in order to type the return of the builder accurately, we must gain access to its original return type, and in doing so any generic arguments provided to that builder are permanently widened.
+The `augmentEventInterface` function generally preserves generic type parameters in classes, with the exception of classes returned from a static builder. This is because in order to type the return of the builder accurately, we must gain access to its original return type, and in doing so any generic arguments provided to that builder are permanently widened.
 
 <details>
 <summary>Expand</summary>
@@ -295,11 +326,12 @@ class MyClass<T extends Letters> {
   }
 }
 
-const MyClassWithEvents = augmentEventListeners(
+const MyClassWithEvents = augmentEventInterface(
   MyClass,
   {
     method: "methodA",
   },
+  undefined,
   ["build"],
 );
 
@@ -320,7 +352,7 @@ built.methodA;
 </details>
 <br/>
 
-This is another issue which may be solved in the future by a [proposed feature](https://github.com/microsoft/TypeScript/issues/1213), but in the meantime, the suggested workaround is to build your class first and then attach event listeners to it. This is almost functionally identical to what `augmentEventListeners` does, albeit without the neat encapsulation, which you could approximate yourself with a helper function.
+This is another issue which may be solved in the future by a [proposed feature](https://github.com/microsoft/TypeScript/issues/1213), but in the meantime, the suggested workaround is to build your class first and then attach event listeners to it. This is almost functionally identical to what `augmentEventInterface` does, albeit without the neat encapsulation, which you could approximate yourself with a helper function.
 
 <details>
 <summary>Expand</summary>
@@ -346,7 +378,7 @@ class MyClass<T extends Letters> {
 }
 
 const buildClassWithEventListeners = <T extends Letters>(letter: T) => {
-  return attachEventListeners(MyClass.build(letter), {
+  return attachEventInterface(MyClass.build(letter), {
     method: "methodA",
   });
 };
@@ -368,7 +400,7 @@ built.methodA;
 
 ## Changelog
 
-- ### 0.1.0 - TBA
+- ### 0.1.0 - TBC
   - Initial release.
 
 ## License

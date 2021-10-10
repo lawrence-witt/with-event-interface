@@ -1,4 +1,4 @@
-import attachEventListeners from "./attach-event-listeners";
+import { attachEventInterface } from "./attach-event-interface";
 
 import { createPropertyError, createTypeError } from "../factories/create-error";
 
@@ -13,7 +13,7 @@ import {
   EventInterfaceConstructor,
 } from "../types";
 
-function augmentEventListeners<
+export function augmentEventInterface<
   C extends Constructor,
   L extends ListenerBinding<InferPrototype<C>>,
   Circ extends KeyOfCirculars<InferPrototype<C>> | undefined,
@@ -29,7 +29,7 @@ function augmentEventListeners<
   class AugmentedConstructor extends constructor {
     constructor(...args: any) {
       super(...args);
-      attachEventListeners(this as InferPrototype<C>, listeners, circulars, namespace);
+      attachEventInterface(this as InferPrototype<C>, listeners, circulars, namespace);
     }
   }
 
@@ -46,12 +46,10 @@ function augmentEventListeners<
 
     AugmentedConstructor[key] = ((...args: []) => {
       return chainIfPromise(original(...args), (res: InferPrototype<C>) => {
-        return attachEventListeners(res, listeners, circulars, namespace);
+        return attachEventInterface(res, listeners, circulars, namespace);
       });
     }) as C[Exclude<B, undefined>];
   });
 
   return AugmentedConstructor as EventInterfaceConstructor<C, L, Circ, B, N>;
 }
-
-export default augmentEventListeners;

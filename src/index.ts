@@ -1,6 +1,4 @@
-import attachEventListeners from "./functions/attach-event-listeners";
-import augmentEventListeners from "./functions/augment-event-listeners";
+export { attachEventInterface } from "./functions/attach-event-interface";
+export { augmentEventInterface } from "./functions/augment-event-interface";
 
 export * from "./types";
-
-export { attachEventListeners, augmentEventListeners };

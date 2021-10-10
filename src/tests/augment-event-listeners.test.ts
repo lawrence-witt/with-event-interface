@@ -1,9 +1,9 @@
 import { createMockConstructor } from "../factories/create-mock-constructor";
 
-import augmentEventListeners from "../functions/augment-event-listeners";
+import { augmentEventInterface } from "../functions/augment-event-interface";
 
 test("it attaches the event interface to an instance of an augmented class", () => {
-  const constructor = augmentEventListeners(createMockConstructor(), {
+  const constructor = augmentEventInterface(createMockConstructor(), {
     test: "syncMethodProperty",
   });
   const instance = new constructor();
@@ -20,7 +20,7 @@ test("it attaches the event interface to an instance of an augmented class", () 
 });
 
 test("it correctly calls an event listener attached to a class method", () => {
-  const constructor = augmentEventListeners(createMockConstructor(), {
+  const constructor = augmentEventInterface(createMockConstructor(), {
     test: "syncMethodProperty",
   });
   const instance = new constructor();
@@ -33,7 +33,7 @@ test("it correctly calls an event listener attached to a class method", () => {
 });
 
 test("it returns an instance of the augmented class from specified static keys synchronously", () => {
-  const constructor = augmentEventListeners(
+  const constructor = augmentEventInterface(
     createMockConstructor(),
     {
       test: "syncMethodProperty",
@@ -49,7 +49,7 @@ test("it returns an instance of the augmented class from specified static keys s
 });
 
 test("it returns an instance of the augmented class from specified static keys asynchronously", (done) => {
-  const constructor = augmentEventListeners(
+  const constructor = augmentEventInterface(
     createMockConstructor(),
     {
       test: "syncMethodProperty",
@@ -68,7 +68,7 @@ test("it returns an instance of the augmented class from specified static keys a
 
 test("it throws an error if the targeted static property does not exist", () => {
   expect(() => {
-    augmentEventListeners(createMockConstructor(), { test: "syncMethodProperty" }, undefined, [
+    augmentEventInterface(createMockConstructor(), { test: "syncMethodProperty" }, undefined, [
       "missingProperty" as any,
     ]);
   }).toThrow("The property missingProperty does not exist on the provided constructor.");
@@ -76,7 +76,7 @@ test("it throws an error if the targeted static property does not exist", () => 
 
 test("it throws an error if the targeted static property is not a method", () => {
   expect(() => {
-    augmentEventListeners(createMockConstructor(), { test: "syncMethodProperty" }, undefined, [
+    augmentEventInterface(createMockConstructor(), { test: "syncMethodProperty" }, undefined, [
       "staticProperty" as any,
     ]);
   }).toThrow("Expected the property staticProperty to be of type: function. Recieved: string.");

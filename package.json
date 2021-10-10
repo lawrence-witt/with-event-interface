@@ -1,6 +1,6 @@
 {
-  "name": "with-event-listeners",
-  "version": "1.0.0",
+  "name": "with-event-interface",
+  "version": "0.1.0",
   "description": "A simple utility for adding event interfaces to any object or class constructor",
   "main": "./dist/index.js",
   "module": "./dist/index.esm.js",
@@ -10,9 +10,20 @@
     "build": "npm run lint && npm run prettier && npm run clean && rollup -c ./rollup.config.js",
     "clean": "rimraf ./dist",
     "lint": "eslint ./src",
-    "prettier": "prettier --check ./src"
+    "prettier": "prettier --check ./src",
+    "prepublishOnly": "npm run test && npm run build"
   },
   "author": "Lawrence Witt",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lawrence-witt/with-event-interface"
+  },
+  "keywords": [
+    "event",
+    "listeners",
+    "interface",
+    "utility"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@rollup/plugin-typescript": "^8.2.5",

@@ -1,9 +1,9 @@
 import { createMockInstance } from "../factories/create-mock-instance";
 
-import attachEventListeners from "../functions/attach-event-listeners";
+import { attachEventInterface } from "../functions/attach-event-interface";
 
 test("it attaches listener state with a default namespace", () => {
-  const instance = attachEventListeners(createMockInstance(), { test: "syncMethod" });
+  const instance = attachEventInterface(createMockInstance(), { test: "syncMethod" });
 
   const expected = new Map();
   expected.set("test", []);
@@ -13,7 +13,7 @@ test("it attaches listener state with a default namespace", () => {
 });
 
 test("it attaches listener state with a custom namespace", () => {
-  const instance = attachEventListeners(
+  const instance = attachEventInterface(
     createMockInstance(),
     { test: "syncMethod" },
     undefined,
@@ -28,7 +28,7 @@ test("it attaches listener state with a custom namespace", () => {
 });
 
 test("it attaches addEventListener and removeEventListener methods", () => {
-  const instance = attachEventListeners(createMockInstance(), { test: "syncMethod" });
+  const instance = attachEventInterface(createMockInstance(), { test: "syncMethod" });
 
   expect(instance).toHaveProperty("addEventListener");
   expect(instance).toHaveProperty("removeEventListener");
@@ -37,7 +37,7 @@ test("it attaches addEventListener and removeEventListener methods", () => {
 });
 
 test("it calls an event listener attached to a synchronous method", () => {
-  const instance = attachEventListeners(createMockInstance(), { test: "syncMethod" });
+  const instance = attachEventInterface(createMockInstance(), { test: "syncMethod" });
   const callback = jest.fn();
 
   instance.addEventListener("test", callback);
@@ -47,7 +47,7 @@ test("it calls an event listener attached to a synchronous method", () => {
 });
 
 test("it calls an event listener attached to an asynchronous method", (done) => {
-  const instance = attachEventListeners(createMockInstance(), { test: "asyncMethod" });
+  const instance = attachEventInterface(createMockInstance(), { test: "asyncMethod" });
   const callback = jest.fn(() => {
     done();
   });
@@ -57,7 +57,7 @@ test("it calls an event listener attached to an asynchronous method", (done) => 
 });
 
 test("it passes the return value of the method to the listener by default", () => {
-  const instance = attachEventListeners(createMockInstance(), { test: "syncMethod" });
+  const instance = attachEventInterface(createMockInstance(), { test: "syncMethod" });
   const callback = jest.fn();
 
   instance.addEventListener("test", callback);
@@ -67,7 +67,7 @@ test("it passes the return value of the method to the listener by default", () =
 });
 
 test("it passes no argument to the listener when onStart is specified", () => {
-  const instance = attachEventListeners(createMockInstance(), { test: "syncMethod" });
+  const instance = attachEventInterface(createMockInstance(), { test: "syncMethod" });
   const callback = jest.fn();
 
   instance.addEventListener("test", callback, true);
@@ -77,7 +77,7 @@ test("it passes no argument to the listener when onStart is specified", () => {
 });
 
 test("it does not call an event listener which has been removed", () => {
-  const instance = attachEventListeners(createMockInstance(), { test: "syncMethod" });
+  const instance = attachEventInterface(createMockInstance(), { test: "syncMethod" });
   const callback = jest.fn();
 
   instance.addEventListener("test", callback);
@@ -90,7 +90,7 @@ test("it does not call an event listener which has been removed", () => {
 });
 
 test("it returns an event interface instance from a circular method", () => {
-  const instance = attachEventListeners(createMockInstance(), { test: "syncMethod" }, [
+  const instance = attachEventInterface(createMockInstance(), { test: "syncMethod" }, [
     "circularMethod",
   ]);
 
@@ -102,7 +102,7 @@ test("it returns an event interface instance from a circular method", () => {
 });
 
 test("it returns an event interface instance from a listener on a circular method", () => {
-  const instance = attachEventListeners(createMockInstance(), { test: "circularMethod" }, [
+  const instance = attachEventInterface(createMockInstance(), { test: "circularMethod" }, [
     "circularMethod",
   ]);
   const callback = jest.fn();
@@ -117,7 +117,7 @@ test("it throws an error if the listener namespace is already assigned", () => {
   const occupied = Object.assign(createMockInstance(), { listeners: "test" });
 
   expect(() => {
-    attachEventListeners(occupied, { test: "syncMethod" });
+    attachEventInterface(occupied, { test: "syncMethod" });
   }).toThrow("The property listeners already exists on the provided object.");
 });
 
@@ -126,22 +126,22 @@ test("it throws an error if the add/removeEventListener properties are already a
   const remove = Object.assign(createMockInstance(), { removeEventListener: "test" });
 
   expect(() => {
-    attachEventListeners(add, { test: "syncMethod" });
+    attachEventInterface(add, { test: "syncMethod" });
   }).toThrow("The property addEventListener already exists on the provided object.");
 
   expect(() => {
-    attachEventListeners(remove, { test: "syncMethod" });
+    attachEventInterface(remove, { test: "syncMethod" });
   }).toThrow("The property removeEventListener already exists on the provided object.");
 });
 
 test("it throws an error if the targeted property does not exist", () => {
   expect(() => {
-    attachEventListeners(createMockInstance(), { test: "missingProperty" } as any);
+    attachEventInterface(createMockInstance(), { test: "missingProperty" } as any);
   }).toThrow("The property missingProperty does not exist on the provided object.");
 });
 
 test("it throws an error if the targeted property is not a method", () => {
   expect(() => {
-    attachEventListeners(createMockInstance(), { test: "scopedString" as any });
+    attachEventInterface(createMockInstance(), { test: "scopedString" as any });
   }).toThrow("Expected the property scopedString to be of type: function. Recieved: string.");
 });

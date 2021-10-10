@@ -11,7 +11,7 @@ import {
   EventListeners,
 } from "../types";
 
-function attachEventListeners<
+export function attachEventInterface<
   T extends { [key: PropertyKey]: any },
   L extends ListenerBinding<T>,
   C extends KeyOfCirculars<T> | undefined,
@@ -60,7 +60,7 @@ function attachEventListeners<
 
       return chainIfPromise(original(...args), (res) => {
         if (circulars?.includes(method as Exclude<C, undefined>)) {
-          attachEventListeners(res as T, listeners, circulars, name);
+          attachEventInterface(res as T, listeners, circulars, name);
         }
         onEnd.forEach((tuple) => tuple[0](res));
         return res;
@@ -77,7 +77,7 @@ function attachEventListeners<
 
     withState[circular] = ((...args: any) => {
       return chainIfPromise(original(...args), (res: T) => {
-        return attachEventListeners(res, listeners, circulars, name);
+        return attachEventInterface(res, listeners, circulars, name);
       });
     }) as typeof withState[typeof circular];
   });
@@ -100,5 +100,3 @@ function attachEventListeners<
 
   return withMethods as unknown as EventInterfaceInstance<T, L, C, N>;
 }
-
-export default attachEventListeners;
