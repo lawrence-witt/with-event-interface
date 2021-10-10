@@ -18,9 +18,9 @@ export type StringKeys<T> = Exclude<keyof T, number | symbol>;
 
 export type DistributeProperties<T extends string> = T extends any ? { [K in T]: any } : never;
 
-export type IncludesKey<T, U extends string> = T extends DistributeProperties<U> ? true : false;
-
-export type TypeTernary<C, T, U> = C extends true ? T : U;
+export type ReservedProperties<N extends string> = DistributeProperties<
+  N | keyof EventListeners<any, any>
+>;
 
 export type ListenerTuple = [(...args: any[]) => any, boolean];
 
@@ -98,9 +98,7 @@ export type EventInterfaceInstance<
   L extends ListenerBinding<T>,
   C extends KeyOfCirculars<T> | undefined = undefined,
   N extends string = "listeners",
-> = IncludesKey<T, N | keyof EventListeners<any, any>> extends true
-  ? never
-  : [C] extends [KeyOfCirculars<T>]
+> = [C] extends [KeyOfCirculars<T>]
   ? EventInterface<T, L, N> & ExtendCircularReturnTypes<T, C, EventInterface<T, L, N>> & T
   : EventInterface<T, L, N> & T;
 
@@ -110,9 +108,7 @@ export type EventInterfaceConstructor<
   Circ extends KeyOfCirculars<InferPrototype<C>> | undefined = undefined,
   B extends KeyOfBuilders<C> | undefined = undefined,
   N extends string = "listeners",
-> = IncludesKey<InferPrototype<C>, N | keyof EventListeners<any, any>> extends true
-  ? never
-  : [B] extends [KeyOfBuilders<C>]
+> = [B] extends [KeyOfBuilders<C>]
   ? Constructor<EventInterfaceInstance<InferPrototype<C>, L, Circ, N>> &
       AugmentedConstructor<C, L, Circ, B, N>
   : Constructor<EventInterfaceInstance<InferPrototype<C>, L, Circ, N>> & C;

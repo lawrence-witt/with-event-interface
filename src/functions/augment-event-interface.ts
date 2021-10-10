@@ -7,6 +7,7 @@ import { chainIfPromise } from "../utils/chain-if-promise";
 import {
   Constructor,
   InferPrototype,
+  ReservedProperties,
   ListenerBinding,
   KeyOfCirculars,
   KeyOfBuilders,
@@ -20,7 +21,7 @@ export function augmentEventInterface<
   B extends KeyOfBuilders<C> | undefined,
   N extends string = "listeners",
 >(
-  constructor: C,
+  constructor: C extends Constructor<ReservedProperties<N>> ? never : C,
   listeners: L,
   circulars?: Exclude<Circ, undefined>[],
   builders?: Exclude<B, undefined>[],
@@ -29,7 +30,7 @@ export function augmentEventInterface<
   class AugmentedConstructor extends constructor {
     constructor(...args: any) {
       super(...args);
-      attachEventInterface(this as InferPrototype<C>, listeners, circulars, namespace);
+      attachEventInterface(this as any, listeners, circulars, namespace);
     }
   }
 
@@ -45,7 +46,7 @@ export function augmentEventInterface<
     }
 
     AugmentedConstructor[key] = ((...args: []) => {
-      return chainIfPromise(original(...args), (res: InferPrototype<C>) => {
+      return chainIfPromise(original(...args), (res: any) => {
         return attachEventInterface(res, listeners, circulars, namespace);
       });
     }) as C[Exclude<B, undefined>];

@@ -3,17 +3,18 @@ import { createListenerState } from "../factories/create-listener-state";
 
 import { isEventInterface } from "../utils/is-event-interface";
 import { isSameEventInterface } from "../utils/is-same-event-interface";
+import { omitEventInterface } from "../utils/omit-event-interface";
 import { chainIfPromise } from "../utils/chain-if-promise";
 import { userFunctions } from "../utils/user-functions";
 
 import {
   AnyObject,
   KeyOfCirculars,
+  ReservedProperties,
   ListenerTuple,
   ListenerBinding,
   EventInterfaceInstance,
 } from "../types";
-import { omitEventInterface } from "../utils/omit-event-interface";
 
 export function attachEventInterface<
   T extends AnyObject,
@@ -21,7 +22,7 @@ export function attachEventInterface<
   C extends KeyOfCirculars<T> | undefined,
   N extends string = "listeners",
 >(
-  instance: T,
+  instance: T extends ReservedProperties<N> ? never : T,
   listeners: L,
   circulars?: Exclude<C, undefined>[],
   namespace = "listeners" as N,
