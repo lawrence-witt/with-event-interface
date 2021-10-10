@@ -1,17 +1,16 @@
-import { ListenerBinding, KeyOfCirculars, EventInterfaceInstance } from "../types";
+import { AnyObject, EventInterfaceInstance } from "../types";
 
-export function isEventInterface<
-  T extends { [key: string]: any },
-  L extends ListenerBinding<T>,
-  C extends KeyOfCirculars<T> | undefined,
-  N extends string = "listeners",
->(
+export function isEventInterface<T extends AnyObject, N extends string>(
   instance: T,
-  listeners: L,
-  builders?: Exclude<C, undefined>[],
-  namespace = "listeners" as N,
-): instance is EventInterfaceInstance<T, L, C, N> {
+  namespace: N,
+): instance is EventInterfaceInstance<T, any, any, N> {
   return (
-    namespace in instance && "addEventListener" in instance && "removeEventListener" in instance
+    typeof instance === "object" &&
+    namespace in instance &&
+    typeof instance[namespace] === "object" &&
+    "id" in instance[namespace] &&
+    "map" in instance[namespace] &&
+    "addEventListener" in instance &&
+    "removeEventListener" in instance
   );
 }

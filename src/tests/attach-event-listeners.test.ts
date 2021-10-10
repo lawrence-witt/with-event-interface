@@ -5,10 +5,14 @@ import { attachEventInterface } from "../functions/attach-event-interface";
 test("it attaches listener state with a default namespace", () => {
   const instance = attachEventInterface(createMockInstance(), { test: "syncMethod" });
 
-  const expected = new Map();
-  expected.set("test", []);
-
   expect(instance).toHaveProperty("listeners");
+
+  const expected = {
+    id: instance.listeners.id,
+    map: new Map(),
+  };
+  expected.map.set("test", []);
+
   expect(instance.listeners).toEqual(expected);
 });
 
@@ -20,10 +24,14 @@ test("it attaches listener state with a custom namespace", () => {
     "myNamespace",
   );
 
-  const expected = new Map();
-  expected.set("test", []);
-
   expect(instance).toHaveProperty("myNamespace");
+
+  const expected = {
+    id: instance.myNamespace.id,
+    map: new Map(),
+  };
+  expected.map.set("test", []);
+
   expect(instance.myNamespace).toEqual(expected);
 });
 
@@ -66,7 +74,7 @@ test("it passes the return value of the method to the listener by default", () =
   expect(callback.mock.calls).toEqual([[1]]);
 });
 
-test("it passes no argument to the listener when onStart is specified", () => {
+test("it passes no argument to the listener when onStart is true", () => {
   const instance = attachEventInterface(createMockInstance(), { test: "syncMethod" });
   const callback = jest.fn();
 
@@ -89,7 +97,7 @@ test("it does not call an event listener which has been removed", () => {
   expect(callback).toHaveBeenCalledTimes(1);
 });
 
-test("it returns an event interface instance from a circular method", () => {
+test("it returns the event interface instance from a selected circular method", () => {
   const instance = attachEventInterface(createMockInstance(), { test: "syncMethod" }, [
     "circularMethod",
   ]);
@@ -101,7 +109,7 @@ test("it returns an event interface instance from a circular method", () => {
   expect(result).toHaveProperty("removeEventListener");
 });
 
-test("it returns an event interface instance from a listener on a circular method", () => {
+test("it returns the event interface instance from a listener on a selected circular method", () => {
   const instance = attachEventInterface(createMockInstance(), { test: "circularMethod" }, [
     "circularMethod",
   ]);
@@ -111,6 +119,16 @@ test("it returns an event interface instance from a listener on a circular metho
   instance.circularMethod();
 
   expect(callback.mock.calls).toEqual([[instance]]);
+});
+
+test("it returns the original object from an unselected circular method", () => {
+  const expected = createMockInstance();
+
+  const instance = attachEventInterface(createMockInstance(), { test: "syncMethod" });
+
+  const actual = instance.circularMethod();
+
+  expect(JSON.stringify(actual)).toEqual(JSON.stringify(expected));
 });
 
 test("it throws an error if the listener namespace is already assigned", () => {
@@ -132,16 +150,4 @@ test("it throws an error if the add/removeEventListener properties are already a
   expect(() => {
     attachEventInterface(remove, { test: "syncMethod" });
   }).toThrow("The property removeEventListener already exists on the provided object.");
-});
-
-test("it throws an error if the targeted property does not exist", () => {
-  expect(() => {
-    attachEventInterface(createMockInstance(), { test: "missingProperty" } as any);
-  }).toThrow("The property missingProperty does not exist on the provided object.");
-});
-
-test("it throws an error if the targeted property is not a method", () => {
-  expect(() => {
-    attachEventInterface(createMockInstance(), { test: "scopedString" as any });
-  }).toThrow("Expected the property scopedString to be of type: function. Recieved: string.");
 });

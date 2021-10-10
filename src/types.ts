@@ -1,5 +1,7 @@
 class Base {}
 
+export type AnyObject = { [key: PropertyKey]: any };
+
 export type Constructor<I = Base> = new (...args: any[]) => I;
 
 export type InferPrototype<T> = T extends Constructor<infer P> ? P : never;
@@ -26,6 +28,11 @@ export type ListenerBinding<T> = {
   [key: string]: KeyOfConstraint<T, (...args: any) => any>;
 };
 
+export type ListenerState = {
+  id: string;
+  map: Map<string, ListenerTuple[]>;
+};
+
 // Event Types
 
 export interface EventListeners<T, L extends ListenerBinding<T>> {
@@ -46,7 +53,7 @@ export interface EventListeners<T, L extends ListenerBinding<T>> {
 }
 
 export type EventInterface<T, L extends ListenerBinding<T>, N extends string = "listeners"> = {
-  [K in N]: Map<string, ListenerTuple[]>;
+  [K in N]: ListenerState;
 } & EventListeners<T, L>;
 
 // Builder Types

@@ -1,18 +1,22 @@
-import { createPropertyError, createTypeError } from "../factories/create-error";
+import { createPropertyError } from "../factories/create-error";
+import { createListenerState } from "../factories/create-listener-state";
 
 import { isEventInterface } from "../utils/is-event-interface";
+import { isSameEventInterface } from "../utils/is-same-event-interface";
 import { chainIfPromise } from "../utils/chain-if-promise";
+import { userFunctions } from "../utils/user-functions";
 
 import {
+  AnyObject,
   KeyOfCirculars,
   ListenerTuple,
   ListenerBinding,
   EventInterfaceInstance,
-  EventListeners,
 } from "../types";
+import { omitEventInterface } from "../utils/omit-event-interface";
 
 export function attachEventInterface<
-  T extends { [key: PropertyKey]: any },
+  T extends AnyObject,
   L extends ListenerBinding<T>,
   C extends KeyOfCirculars<T> | undefined,
   N extends string = "listeners",
@@ -22,7 +26,7 @@ export function attachEventInterface<
   circulars?: Exclude<C, undefined>[],
   namespace = "listeners" as N,
 ): EventInterfaceInstance<T, L, C, N> {
-  if (isEventInterface(instance, listeners, circulars, namespace)) return instance;
+  if (isEventInterface(instance, namespace)) return instance;
 
   const name = namespace as "listeners";
 
@@ -30,21 +34,31 @@ export function attachEventInterface<
     if (prop in instance) throw new Error(createPropertyError(prop, "object", false));
   });
 
-  const withState = Object.assign(instance, { [name]: new Map<string, ListenerTuple[]>() });
+  const withState = Object.assign(instance, { [name]: createListenerState() });
 
-  Object.entries(listeners).forEach(([type, method]) => {
-    if (!((method as PropertyKey) in withState)) {
-      throw new Error(createPropertyError(method, "object", true));
-    }
+  const listenerEntries = Object.entries(listeners);
 
-    if (typeof withState[method] !== "function") {
-      throw new Error(createTypeError(method, "function", typeof withState[method]));
-    }
+  userFunctions(withState).forEach((key: keyof typeof withState) => {
+    if (typeof withState[key] !== "function") return;
 
-    const original = withState[method].bind(withState);
+    const original = withState[key].bind(withState);
 
-    withState[method] = ((...args: any) => {
-      const callbacks = withState[name].get(type);
+    const listener = listenerEntries.find((entry) => entry[1] === key);
+
+    withState[key] = ((...args: any) => {
+      if (!listener) {
+        return chainIfPromise(original(...args), (res: any) => {
+          if (circulars?.includes(key as Exclude<C, undefined>)) {
+            return attachEventInterface(res, listeners, circulars, name);
+          } else if (isSameEventInterface(res, withState, name)) {
+            return omitEventInterface(res, name);
+          }
+
+          return res;
+        });
+      }
+
+      const callbacks = withState[name].map.get(listener[0]);
 
       if (!callbacks) return original(...args);
 
@@ -58,45 +72,38 @@ export function attachEventInterface<
 
       onStart.forEach((tuple) => tuple[0]());
 
-      return chainIfPromise(original(...args), (res) => {
-        if (circulars?.includes(method as Exclude<C, undefined>)) {
-          attachEventInterface(res as T, listeners, circulars, name);
+      return chainIfPromise(original(...args), (res: any) => {
+        if (circulars?.includes(key as Exclude<C, undefined>)) {
+          res = attachEventInterface(res, listeners, circulars, name);
+        } else if (isSameEventInterface(res, withState, name)) {
+          res = omitEventInterface(res, name);
         }
+
         onEnd.forEach((tuple) => tuple[0](res));
         return res;
       });
-    }) as typeof withState[typeof method];
+    }) as typeof withState[typeof key];
 
-    withState[name].set(type, []);
-  });
+    if (listener) withState[name].map.set(listener[0], []);
 
-  circulars?.forEach((circular) => {
-    if (Object.values(listeners).includes(circular)) return;
-
-    const original = withState[circular].bind(withState);
-
-    withState[circular] = ((...args: any) => {
-      return chainIfPromise(original(...args), (res: T) => {
-        return attachEventInterface(res, listeners, circulars, name);
-      });
-    }) as typeof withState[typeof circular];
+    Object.defineProperty(withState[key], "name", { value: key });
   });
 
   const withMethods = Object.assign(withState, {
     addEventListener: (type: string, listener: (...args: any) => any, onStart = false) => {
-      const callbacks = withState[name].get(type);
+      const callbacks = withState[name].map.get(type);
       if (!callbacks) return;
-      withState[name].set(type, [...callbacks, [listener, onStart]]);
+      withState[name].map.set(type, [...callbacks, [listener, onStart]]);
     },
     removeEventListener: (type: string, listener: (...args: any) => any) => {
-      const callbacks = withState[name].get(type);
+      const callbacks = withState[name].map.get(type);
       if (!callbacks) return;
-      withState[name].set(
+      withState[name].map.set(
         type,
         callbacks.filter((l) => l[0] !== listener),
       );
     },
-  } as EventListeners<T, L>);
+  });
 
   return withMethods as unknown as EventInterfaceInstance<T, L, C, N>;
 }

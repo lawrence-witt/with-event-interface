@@ -8,10 +8,14 @@ test("it attaches the event interface to an instance of an augmented class", () 
   });
   const instance = new constructor();
 
-  const expected = new Map();
-  expected.set("test", []);
-
   expect(instance).toHaveProperty("listeners");
+
+  const expected = {
+    id: instance.listeners.id,
+    map: new Map(),
+  };
+  expected.map.set("test", []);
+
   expect(instance.listeners).toEqual(expected);
   expect(instance).toHaveProperty("addEventListener");
   expect(instance).toHaveProperty("removeEventListener");
