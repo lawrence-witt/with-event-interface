@@ -38,6 +38,7 @@ test("it returns an instance of the augmented class from specified static keys s
     {
       test: "syncMethodProperty",
     },
+    undefined,
     ["syncBuild"],
   );
   const instance = constructor.syncBuild();
@@ -53,6 +54,7 @@ test("it returns an instance of the augmented class from specified static keys a
     {
       test: "syncMethodProperty",
     },
+    undefined,
     ["asyncBuild"],
   );
 
@@ -66,7 +68,7 @@ test("it returns an instance of the augmented class from specified static keys a
 
 test("it throws an error if the targeted static property does not exist", () => {
   expect(() => {
-    augmentEventListeners(createMockConstructor(), { test: "syncMethodProperty" }, [
+    augmentEventListeners(createMockConstructor(), { test: "syncMethodProperty" }, undefined, [
       "missingProperty" as any,
     ]);
   }).toThrow("The property missingProperty does not exist on the provided constructor.");
@@ -74,7 +76,7 @@ test("it throws an error if the targeted static property does not exist", () => 
 
 test("it throws an error if the targeted static property is not a method", () => {
   expect(() => {
-    augmentEventListeners(createMockConstructor(), { test: "syncMethodProperty" }, [
+    augmentEventListeners(createMockConstructor(), { test: "syncMethodProperty" }, undefined, [
       "staticProperty" as any,
     ]);
   }).toThrow("Expected the property staticProperty to be of type: function. Recieved: string.");

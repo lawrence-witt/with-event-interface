@@ -6,7 +6,7 @@ export type InferPrototype<T> = T extends Constructor<infer P> ? P : never;
 
 export type KeyOfConstraint<T, U> = {
   [P in keyof T]: T[P] extends U ? P : never;
-}[keyof T] extends PropertyKey
+}[keyof T] extends keyof T
   ? { [P in keyof T]: T[P] extends U ? P : never }[keyof T]
   : never;
 

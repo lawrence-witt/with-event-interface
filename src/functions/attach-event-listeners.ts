@@ -3,7 +3,13 @@ import { createPropertyError, createTypeError } from "../factories/create-error"
 import { isEventInterface } from "../utils/is-event-interface";
 import { chainIfPromise } from "../utils/chain-if-promise";
 
-import { KeyOfCirculars, ListenerTuple, ListenerBinding, EventInterfaceInstance } from "../types";
+import {
+  KeyOfCirculars,
+  ListenerTuple,
+  ListenerBinding,
+  EventInterfaceInstance,
+  EventListeners,
+} from "../types";
 
 function attachEventListeners<
   T extends { [key: PropertyKey]: any },
@@ -90,7 +96,7 @@ function attachEventListeners<
         callbacks.filter((l) => l[0] !== listener),
       );
     },
-  });
+  } as EventListeners<T, L>);
 
   return withMethods as unknown as EventInterfaceInstance<T, L, C, N>;
 }
