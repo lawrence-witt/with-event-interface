@@ -1,9 +1,7 @@
-import { createPropertyError } from "../factories/create-error";
+import { createPropertyError, createTypeError } from "../factories/create-error";
 
 import { isEventInterface } from "../utils/is-event-interface";
-import { isInstanceOfCustomConstructor } from "../utils/is-instance-of-custom-constructor";
 import { chainIfPromise } from "../utils/chain-if-promise";
-import { userFunctions } from "../utils/user-functions";
 
 import {
   AnyObject,
@@ -32,30 +30,19 @@ export function attachEventInterface<
 
   const withState = Object.assign(instance, { [name]: new Map<string, ListenerTuple[]>() });
 
-  const listenerEntries = Object.entries(listeners);
+  Object.entries(listeners).forEach(([type, method]) => {
+    if (!withState[method]) {
+      throw new Error(createPropertyError(method, "object", true));
+    }
 
-  userFunctions(withState).forEach((key: keyof typeof withState) => {
-    if (typeof withState[key] !== "function") return;
+    if (typeof withState[method] !== "function") {
+      throw new Error(createTypeError(method, "function", typeof withState[method]));
+    }
 
-    const original = withState[key].bind(withState);
+    const original = withState[method].bind(withState);
 
-    const listener = listenerEntries.find((entry) => entry[1] === key);
-
-    withState[key] = ((...args: any) => {
-      const resolveResult = (res: unknown) => {
-        if (isInstanceOfCustomConstructor(instance, res)) {
-          return attachEventInterface(res as typeof instance, listeners, namespace);
-        }
-        return res;
-      };
-
-      if (!withState[name]) return original(...args);
-
-      if (!listener) {
-        return chainIfPromise(original(...args), resolveResult);
-      }
-
-      const callbacks = withState[name].get(listener[0]);
+    withState[method] = ((...args: any) => {
+      const callbacks = withState[name].get(type);
 
       if (!callbacks) return original(...args);
 
@@ -69,15 +56,15 @@ export function attachEventInterface<
 
       onStart.forEach((tuple) => tuple[0]());
 
-      return ((res: unknown) => {
+      return chainIfPromise(original(...args), (res: unknown) => {
         onEnd.forEach((tuple) => tuple[0](res));
         return res;
-      })(chainIfPromise(original(...args), resolveResult));
-    }) as typeof withState[typeof key];
+      });
+    }) as typeof withState[typeof method];
 
-    if (listener) withState[name].set(listener[0], []);
+    withState[name].set(type, []);
 
-    Object.defineProperty(withState[key], "name", { value: key });
+    Object.defineProperty(withState[method], "name", { value: method });
   });
 
   const withMethods = Object.assign(withState, {

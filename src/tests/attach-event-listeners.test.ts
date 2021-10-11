@@ -35,30 +35,6 @@ test("it attaches addEventListener and removeEventListener methods", () => {
   expect(typeof instance.removeEventListener).toBe("function");
 });
 
-test("it attaches the event interface to new instances returned by this instance's methods", () => {
-  const Foo = function (this: any) {
-    this.foo = "bar";
-    this.syncMethod = function () {
-      return 42;
-    };
-    this.circularMethod = function () {
-      return new (Foo as any)();
-    };
-  };
-
-  const instance = attachEventInterface(new (Foo as any)(), { test: "syncMethod" });
-  const actual = instance.circularMethod();
-
-  expect(actual).toEqual(
-    expect.objectContaining({
-      foo: expect.stringMatching("bar"),
-      listeners: expect.any(Map),
-      addEventListener: expect.any(Function),
-      removeEventListener: expect.any(Function),
-    }),
-  );
-});
-
 test("it calls an event listener attached to a synchronous method", () => {
   const instance = attachEventInterface(createMockInstance(), { test: "syncMethod" });
   const callback = jest.fn();
@@ -131,4 +107,16 @@ test("it throws an error if the add/removeEventListener properties are already a
   expect(() => {
     attachEventInterface(remove as any, { test: "syncMethod" });
   }).toThrow("The property removeEventListener already exists on the provided object.");
+});
+
+test("it throws an error if a non-existent property name is passed via listeners", () => {
+  expect(() => {
+    attachEventInterface(createMockInstance(), { test: "missingProperty" as any });
+  }).toThrow("The property missingProperty does not exist on the provided object.");
+});
+
+test("it throws an error if a non-method property name is passed via listeners", () => {
+  expect(() => {
+    attachEventInterface(createMockInstance(), { test: "scopedString" as any });
+  }).toThrow("Expected the property scopedString to be of type: function. Recieved: string.");
 });
