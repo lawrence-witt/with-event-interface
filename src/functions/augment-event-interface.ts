@@ -9,7 +9,6 @@ import {
   InferPrototype,
   ReservedProperties,
   ListenerBinding,
-  KeyOfCirculars,
   KeyOfBuilders,
   EventInterfaceConstructor,
 } from "../types";
@@ -17,20 +16,18 @@ import {
 export function augmentEventInterface<
   C extends Constructor,
   L extends ListenerBinding<InferPrototype<C>>,
-  Ci extends KeyOfCirculars<InferPrototype<C>> | undefined,
   B extends KeyOfBuilders<C> | undefined,
   N extends string = "listeners",
 >(
   constructor: C extends Constructor<ReservedProperties<N>> ? never : C,
   listeners: L,
-  circulars?: Exclude<Ci, undefined>[],
   builders?: Exclude<B, undefined>[],
   namespace = "listeners" as N,
-): EventInterfaceConstructor<C, L, Ci, B, N> {
+): EventInterfaceConstructor<C, L, B, N> {
   class AugmentedConstructor extends constructor {
     constructor(...args: any) {
       super(...args);
-      attachEventInterface(this as any, listeners, circulars, namespace);
+      attachEventInterface(this as any, listeners, namespace);
     }
   }
 
@@ -47,10 +44,10 @@ export function augmentEventInterface<
 
     AugmentedConstructor[key] = ((...args: []) => {
       return chainIfPromise(original(...args), (res: any) => {
-        return attachEventInterface(res, listeners, circulars, namespace);
+        return attachEventInterface(res, listeners, namespace);
       });
     }) as C[Exclude<B, undefined>];
   });
 
-  return AugmentedConstructor as EventInterfaceConstructor<C, L, Ci, B, N>;
+  return AugmentedConstructor as EventInterfaceConstructor<C, L, B, N>;
 }

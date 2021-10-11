@@ -8,14 +8,10 @@ test("it attaches the event interface to an instance of an augmented class", () 
   });
   const instance = new constructor();
 
+  const expected = new Map();
+  expected.set("test", []);
+
   expect(instance).toHaveProperty("listeners");
-
-  const expected = {
-    id: instance.listeners.id,
-    map: new Map(),
-  };
-  expected.map.set("test", []);
-
   expect(instance.listeners).toEqual(expected);
   expect(instance).toHaveProperty("addEventListener");
   expect(instance).toHaveProperty("removeEventListener");
@@ -42,7 +38,6 @@ test("it returns an instance of the augmented class from specified static keys s
     {
       test: "syncMethodProperty",
     },
-    undefined,
     ["syncBuild"],
   );
   const instance = constructor.syncBuild();
@@ -58,7 +53,6 @@ test("it returns an instance of the augmented class from specified static keys a
     {
       test: "syncMethodProperty",
     },
-    undefined,
     ["asyncBuild"],
   );
 
@@ -72,7 +66,7 @@ test("it returns an instance of the augmented class from specified static keys a
 
 test("it throws an error if the targeted static property does not exist", () => {
   expect(() => {
-    augmentEventInterface(createMockConstructor(), { test: "syncMethodProperty" }, undefined, [
+    augmentEventInterface(createMockConstructor(), { test: "syncMethodProperty" }, [
       "missingProperty" as any,
     ]);
   }).toThrow("The property missingProperty does not exist on the provided constructor.");
@@ -80,7 +74,7 @@ test("it throws an error if the targeted static property does not exist", () => 
 
 test("it throws an error if the targeted static property is not a method", () => {
   expect(() => {
-    augmentEventInterface(createMockConstructor(), { test: "syncMethodProperty" }, undefined, [
+    augmentEventInterface(createMockConstructor(), { test: "syncMethodProperty" }, [
       "staticProperty" as any,
     ]);
   }).toThrow("Expected the property staticProperty to be of type: function. Recieved: string.");

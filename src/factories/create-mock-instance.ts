@@ -2,9 +2,6 @@
 export const createMockInstance = () => {
   const instance = {
     scopedString: "scopedString",
-    circularMethod: () => {
-      return instance;
-    },
     syncMethod: (value: number) => {
       return value;
     },

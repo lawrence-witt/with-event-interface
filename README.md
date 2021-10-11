@@ -1,6 +1,6 @@
 # with-event-interface
 
-Adds a simple, intuitive event interface to any JavaScript object or class constructor. Attach listeners to your methods and run side-effects whenever they get called.
+Adds a simple, intuitive event interface to any JavaScript object or class constructor. Attach listeners to your methods and run side-effects whenever they get called. Augment static methods of your classes with event interface functionality so new instances are always ready to use.
 
 ## Getting Started
 
@@ -21,7 +21,7 @@ This library exposes two core functions. To attach an event interface to a JavaS
 ## AttachEventInterface
 
 ```
-function attachEventInterface(instance, listeners, circulars?, namespace?) {};
+function attachEventInterface(instance, listeners, namespace?) {};
 ```
 
 ### Parameters
@@ -29,8 +29,6 @@ function attachEventInterface(instance, listeners, circulars?, namespace?) {};
 `instance` - the object to attach event listeners to (this will mutate the provided object).
 
 `listeners` - a record binding event types to method names.
-
-`circulars` - (_optional_) - an array of method names which return instances of the object. Defaults to `undefined`.
 
 `namespace` - (_optional_) - the property on the object where event state will be stored. Defaults to `"listeners"`.
 
@@ -62,7 +60,7 @@ attachEventInterface(myMaths, {
 ## AugmentEventInterface
 
 ```
-function augmentEventInterface(constructor, listeners, circulars?, builders?, namespace?) {};
+function augmentEventInterface(constructor, listeners, builders?, namespace?) {};
 ```
 
 ### Parameters
@@ -70,8 +68,6 @@ function augmentEventInterface(constructor, listeners, circulars?, builders?, na
 `constructor` - the class constructor to augment with event functionality (this will NOT mutate the provided constructor).
 
 `listeners` - a record binding event types to method names.
-
-`circulars` - (_optional_) - an array of prototype method names which return instances of the class. Defaults to `undefined`.
 
 `builders` - (_optional_) - an array of static method names which return instances of the class. Defaults to `undefined`.
 
@@ -192,30 +188,6 @@ myMethods.slice({}, 1).catch((err) => console.log(err.message));
 
 Note that in the above example, the listener callback will not be executed if the promise it is waiting on rejects.
 
-### Circular Methods
-
-```
-const myMethods = {
-  slice: (a, b) => a.slice(b),
-  self: () => {
-    return myMethods;
-  }
-}
-
-attachEventInterface(myMethods, {
-  sliced: "slice",
-}, ["self"]);
-
-const itself = myMethods.self();
-
-console.log("listeners" in itself);
-  // console logs: true
-console.log("addEventListener" in itself);
-  // console logs: true
-  console.log("removeEventListener" in itself);
-  // console logs: true
-```
-
 ### Class Builders
 
 ```
@@ -240,7 +212,6 @@ const MyInterfaceWithEvents = augmentEventInterface(
   {
     started: "start",
   },
-  undefined,
   ["build"],
 );
 
@@ -262,9 +233,7 @@ const MyInterfaceWithEvents = augmentEventInterface(
 
 All method keys provided in the `listeners` argument must refer to public methods on the object or constructor in question. Unfortunately it is not possible at this time to dynamically retrieve private/protected method names from a class, although this is a [proposed feature](https://github.com/microsoft/TypeScript/issues/22677) which may make its way to the language at some point.
 
-A "circular" is defined here as a method on an object which returns either an instance of the object, or a Promise which resolves to an instance of the object. Only methods which satisfy this signature can have their names passed to the `circulars` argument. `attachEventInterface` is not picky about whether this instance is new or current, and will simply return the current object if the library's namespace is detected.
-
-Similarly, a "builder" is defined here as a static method on a class which returns either an instance of the class, or a Promise which resolves to an instance of the class. Only methods which satisfy this signature can have their names passed to the `builders` argument.
+A "builder" is defined here as a static method on a class which returns either an instance of the class, or a Promise which resolves to an instance of the class. Only methods which satisfy this signature can have their names passed to the `builders` argument.
 
 <details>
 <summary>Expand</summary>
@@ -331,7 +300,6 @@ const MyClassWithEvents = augmentEventInterface(
   {
     method: "methodA",
   },
-  undefined,
   ["build"],
 );
 

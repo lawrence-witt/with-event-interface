@@ -1,15 +1,12 @@
 import { createPropertyError } from "../factories/create-error";
-import { createListenerState } from "../factories/create-listener-state";
 
 import { isEventInterface } from "../utils/is-event-interface";
-import { isSameEventInterface } from "../utils/is-same-event-interface";
-import { omitEventInterface } from "../utils/omit-event-interface";
+import { isInstanceOfCustomConstructor } from "../utils/is-instance-of-custom-constructor";
 import { chainIfPromise } from "../utils/chain-if-promise";
 import { userFunctions } from "../utils/user-functions";
 
 import {
   AnyObject,
-  KeyOfCirculars,
   ReservedProperties,
   ListenerTuple,
   ListenerBinding,
@@ -19,15 +16,13 @@ import {
 export function attachEventInterface<
   T extends AnyObject,
   L extends ListenerBinding<T>,
-  C extends KeyOfCirculars<T> | undefined,
   N extends string = "listeners",
 >(
   instance: T extends ReservedProperties<N> ? never : T,
   listeners: L,
-  circulars?: Exclude<C, undefined>[],
   namespace = "listeners" as N,
-): EventInterfaceInstance<T, L, C, N> {
-  if (isEventInterface(instance, namespace)) return instance;
+): EventInterfaceInstance<T, L, N> {
+  if (isEventInterface(instance)) return instance;
 
   const name = namespace as "listeners";
 
@@ -35,7 +30,7 @@ export function attachEventInterface<
     if (prop in instance) throw new Error(createPropertyError(prop, "object", false));
   });
 
-  const withState = Object.assign(instance, { [name]: createListenerState() });
+  const withState = Object.assign(instance, { [name]: new Map<string, ListenerTuple[]>() });
 
   const listenerEntries = Object.entries(listeners);
 
@@ -47,20 +42,20 @@ export function attachEventInterface<
     const listener = listenerEntries.find((entry) => entry[1] === key);
 
     withState[key] = ((...args: any) => {
-      const resolveResult = (res: any) => {
-        if (circulars?.includes(key as Exclude<C, undefined>)) {
-          return attachEventInterface(res, listeners, circulars, name);
-        } else if (isSameEventInterface(res, withState, name)) {
-          return omitEventInterface(res, name);
+      const resolveResult = (res: unknown) => {
+        if (isInstanceOfCustomConstructor(instance, res)) {
+          return attachEventInterface(res as typeof instance, listeners, namespace);
         }
         return res;
       };
+
+      if (!withState[name]) return original(...args);
 
       if (!listener) {
         return chainIfPromise(original(...args), resolveResult);
       }
 
-      const callbacks = withState[name].map.get(listener[0]);
+      const callbacks = withState[name].get(listener[0]);
 
       if (!callbacks) return original(...args);
 
@@ -74,32 +69,32 @@ export function attachEventInterface<
 
       onStart.forEach((tuple) => tuple[0]());
 
-      return ((res: any) => {
+      return ((res: unknown) => {
         onEnd.forEach((tuple) => tuple[0](res));
         return res;
       })(chainIfPromise(original(...args), resolveResult));
     }) as typeof withState[typeof key];
 
-    if (listener) withState[name].map.set(listener[0], []);
+    if (listener) withState[name].set(listener[0], []);
 
     Object.defineProperty(withState[key], "name", { value: key });
   });
 
   const withMethods = Object.assign(withState, {
     addEventListener: (type: string, listener: (...args: any) => any, onStart = false) => {
-      const callbacks = withState[name].map.get(type);
+      const callbacks = withState[name].get(type);
       if (!callbacks) return;
-      withState[name].map.set(type, [...callbacks, [listener, onStart]]);
+      withState[name].set(type, [...callbacks, [listener, onStart]]);
     },
     removeEventListener: (type: string, listener: (...args: any) => any) => {
-      const callbacks = withState[name].map.get(type);
+      const callbacks = withState[name].get(type);
       if (!callbacks) return;
-      withState[name].map.set(
+      withState[name].set(
         type,
         callbacks.filter((l) => l[0] !== listener),
       );
     },
   });
 
-  return withMethods as unknown as EventInterfaceInstance<T, L, C, N>;
+  return withMethods;
 }

@@ -5,14 +5,10 @@ import { attachEventInterface } from "../functions/attach-event-interface";
 test("it attaches listener state with a default namespace", () => {
   const instance = attachEventInterface(createMockInstance(), { test: "syncMethod" });
 
+  const expected = new Map();
+  expected.set("test", []);
+
   expect(instance).toHaveProperty("listeners");
-
-  const expected = {
-    id: instance.listeners.id,
-    map: new Map(),
-  };
-  expected.map.set("test", []);
-
   expect(instance.listeners).toEqual(expected);
 });
 
@@ -20,18 +16,13 @@ test("it attaches listener state with a custom namespace", () => {
   const instance = attachEventInterface(
     createMockInstance(),
     { test: "syncMethod" },
-    undefined,
     "myNamespace",
   );
 
+  const expected = new Map();
+  expected.set("test", []);
+
   expect(instance).toHaveProperty("myNamespace");
-
-  const expected = {
-    id: instance.myNamespace.id,
-    map: new Map(),
-  };
-  expected.map.set("test", []);
-
   expect(instance.myNamespace).toEqual(expected);
 });
 
@@ -42,6 +33,30 @@ test("it attaches addEventListener and removeEventListener methods", () => {
   expect(instance).toHaveProperty("removeEventListener");
   expect(typeof instance.addEventListener).toBe("function");
   expect(typeof instance.removeEventListener).toBe("function");
+});
+
+test("it attaches the event interface to new instances returned by this instance's methods", () => {
+  const Foo = function (this: any) {
+    this.foo = "bar";
+    this.syncMethod = function () {
+      return 42;
+    };
+    this.circularMethod = function () {
+      return new (Foo as any)();
+    };
+  };
+
+  const instance = attachEventInterface(new (Foo as any)(), { test: "syncMethod" });
+  const actual = instance.circularMethod();
+
+  expect(actual).toEqual(
+    expect.objectContaining({
+      foo: expect.stringMatching("bar"),
+      listeners: expect.any(Map),
+      addEventListener: expect.any(Function),
+      removeEventListener: expect.any(Function),
+    }),
+  );
 });
 
 test("it calls an event listener attached to a synchronous method", () => {
@@ -97,45 +112,11 @@ test("it does not call an event listener which has been removed", () => {
   expect(callback).toHaveBeenCalledTimes(1);
 });
 
-test("it returns the event interface instance from a selected circular method", () => {
-  const instance = attachEventInterface(createMockInstance(), { test: "syncMethod" }, [
-    "circularMethod",
-  ]);
-
-  const result = instance.circularMethod();
-
-  expect(result).toHaveProperty("listeners");
-  expect(result).toHaveProperty("addEventListener");
-  expect(result).toHaveProperty("removeEventListener");
-});
-
-test("it returns the event interface instance from a listener on a selected circular method", () => {
-  const instance = attachEventInterface(createMockInstance(), { test: "circularMethod" }, [
-    "circularMethod",
-  ]);
-  const callback = jest.fn();
-
-  instance.addEventListener("test", callback);
-  instance.circularMethod();
-
-  expect(callback.mock.calls).toEqual([[instance]]);
-});
-
-test("it returns the original object from an unselected circular method", () => {
-  const expected = createMockInstance();
-
-  const instance = attachEventInterface(createMockInstance(), { test: "syncMethod" });
-
-  const actual = instance.circularMethod();
-
-  expect(JSON.stringify(actual)).toEqual(JSON.stringify(expected));
-});
-
 test("it throws an error if the listener namespace is already assigned", () => {
   const occupied = Object.assign(createMockInstance(), { listeners: "test" });
 
   expect(() => {
-    attachEventInterface(occupied, { test: "syncMethod" });
+    attachEventInterface(occupied as any, { test: "syncMethod" }, "listeners");
   }).toThrow("The property listeners already exists on the provided object.");
 });
 
@@ -144,10 +125,10 @@ test("it throws an error if the add/removeEventListener properties are already a
   const remove = Object.assign(createMockInstance(), { removeEventListener: "test" });
 
   expect(() => {
-    attachEventInterface(add, { test: "syncMethod" });
+    attachEventInterface(add as any, { test: "syncMethod" });
   }).toThrow("The property addEventListener already exists on the provided object.");
 
   expect(() => {
-    attachEventInterface(remove, { test: "syncMethod" });
+    attachEventInterface(remove as any, { test: "syncMethod" });
   }).toThrow("The property removeEventListener already exists on the provided object.");
 });
