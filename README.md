@@ -368,7 +368,7 @@ built.methodA;
 
 ## Changelog
 
-- ### 0.1.0 - TBC
+- ### 0.1.0 - 11/10/2021
   - Initial release.
 
 ## License
